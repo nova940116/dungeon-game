@@ -1,0 +1,94 @@
+/**
+ * Every runtime asset the game loads. Files are produced by `npm run assets`
+ * (see scripts/asset-sources.json) into public/assets/.
+ */
+
+export type ClipName = 'idle' | 'move' | 'run' | 'attack' | 'shoot' | 'aim' | 'hit' | 'death' | 'jump' | 'punch';
+
+export interface ModelSpec {
+  url: string;
+  /** Scale so the model's height (or largest dimension) equals `size` world units. */
+  fit: 'height' | 'max';
+  size: number;
+  /** Extra yaw so the model faces +Z like the rest of the game. */
+  rotationY?: number;
+  /** Skinned + animated: instances get their own materials (for hit flash). */
+  animated?: boolean;
+  /** Logical clip name → clip name in the file (matched by suffix, e.g. "Armature|Slime_Idle"). */
+  clips?: Partial<Record<ClipName, string>>;
+}
+
+const base = import.meta.env.BASE_URL;
+const model = (path: string) => `${base}assets/models/${path}`;
+
+export const MODELS = {
+  player: {
+    url: model('characters/player_adventurer.glb'), fit: 'height', size: 2.0, animated: true,
+    clips: { idle: 'Idle_Neutral', run: 'Run', hit: 'HitRecieve', death: 'Death' },
+  },
+  slime: {
+    url: model('characters/enemy_slime.glb'), fit: 'max', size: 1.4, animated: true,
+    clips: { idle: 'Slime_Idle', move: 'Slime_Walk', attack: 'Slime_Attack', death: 'Slime_Death' },
+  },
+  bat: {
+    url: model('characters/enemy_bat.glb'), fit: 'max', size: 1.6, animated: true,
+    clips: { idle: 'Bat_Flying', move: 'Bat_Flying', attack: 'Bat_Attack', hit: 'Bat_Hit', death: 'Bat_Death' },
+  },
+  mushnub: {
+    url: model('characters/enemy_mushnub.glb'), fit: 'height', size: 1.5, animated: true,
+    clips: { idle: 'Idle', move: 'Walk', attack: 'Bite_Front', hit: 'HitRecieve', death: 'Death' },
+  },
+  giant: {
+    url: model('characters/enemy_giant.glb'), fit: 'height', size: 2.5, animated: true,
+    clips: { idle: 'Idle', move: 'Walk', attack: 'Attack', hit: 'HitRecieve', death: 'Death' },
+  },
+  demon: {
+    url: model('characters/boss_demon.glb'), fit: 'height', size: 3.6, animated: true,
+    clips: { idle: 'Idle', move: 'Walk', run: 'Run', attack: 'Weapon', punch: 'Punch', jump: 'Jump', hit: 'HitReact', death: 'Death' },
+  },
+
+  bow: { url: model('props/weapon_bow.glb'), fit: 'max', size: 0.95 },
+  arrow: { url: model('props/projectile_arrow.glb'), fit: 'max', size: 0.9 },
+
+  wall: { url: model('environment/wall_stone.glb'), fit: 'max', size: 2 },
+  rockA: { url: model('environment/rock_a.glb'), fit: 'max', size: 1.35 },
+  rockB: { url: model('environment/rock_b.glb'), fit: 'max', size: 1.4 },
+  rocksDark: { url: model('environment/rocks_dark.glb'), fit: 'max', size: 1.4 },
+  boulder: { url: model('environment/boulder.glb'), fit: 'max', size: 1.5 },
+  torch: { url: model('environment/torch.glb'), fit: 'height', size: 1.7 },
+  crystal: { url: model('environment/crystal.glb'), fit: 'height', size: 1.5 },
+  mushroom: { url: model('environment/mushroom.glb'), fit: 'height', size: 0.6 },
+
+  treePine: { url: model('environment/tree_pine.glb'), fit: 'height', size: 4.6 },
+  treeRound: { url: model('environment/tree_round.glb'), fit: 'height', size: 3.6 },
+  treePineSnow: { url: model('environment/tree_pine_snow.glb'), fit: 'height', size: 4.2 },
+  treeDead: { url: model('environment/tree_dead.glb'), fit: 'height', size: 3.6 },
+  treeDeadSnow: { url: model('environment/tree_dead_snow.glb'), fit: 'height', size: 3.2 },
+  treePalm: { url: model('environment/tree_palm.glb'), fit: 'height', size: 4.2 },
+  cactus: { url: model('environment/cactus.glb'), fit: 'height', size: 1.9 },
+
+  bush: { url: model('environment/bush.glb'), fit: 'max', size: 1.3 },
+  bushFlowers: { url: model('environment/bush_flowers.glb'), fit: 'max', size: 1.3 },
+  bushSnow: { url: model('environment/bush_snow.glb'), fit: 'max', size: 1.3 },
+  grass: { url: model('environment/grass.glb'), fit: 'max', size: 0.7 },
+  flowers: { url: model('environment/flowers.glb'), fit: 'max', size: 0.7 },
+  skull: { url: model('environment/skull.glb'), fit: 'max', size: 0.5 },
+  ribcage: { url: model('environment/ribcage.glb'), fit: 'max', size: 1.4 },
+} satisfies Record<string, ModelSpec>;
+
+export type ModelKey = keyof typeof MODELS;
+
+export type ThemeId = 'forest' | 'desert' | 'ice' | 'lava';
+export type SurfaceKey = `${ThemeId}_${'floor' | 'ground'}`;
+
+export const SURFACES: readonly SurfaceKey[] = [
+  'forest_floor', 'forest_ground', 'desert_floor', 'desert_ground',
+  'ice_floor', 'ice_ground', 'lava_floor', 'lava_ground',
+];
+
+export const surfaceUrls = (key: SurfaceKey) => ({
+  map: `${base}assets/textures/${key}_diff.webp`,
+  normalMap: `${base}assets/textures/${key}_nor.webp`,
+});
+
+export const ENVIRONMENT_HDR = `${base}assets/env/sky.hdr`;
