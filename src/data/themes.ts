@@ -75,3 +75,37 @@ export const chapterOf = (roomNo: number): number => Math.floor((roomNo - 1) / B
 export const themeForRoom = (roomNo: number): Theme => THEMES[chapterOf(roomNo) % THEMES.length];
 
 export const isBossRoom = (roomNo: number): boolean => roomNo % BALANCE.bossEvery === 0;
+
+export const isStageBossRoom = (roomNo: number): boolean => roomNo % BALANCE.stageBossEvery === 0;
+
+const mixHex = (a: number, b: number, t: number): number => {
+  const ch = (shift: number) => Math.round(((a >> shift) & 255) * (1 - t) + ((b >> shift) & 255) * t) << shift;
+  return ch(16) | ch(8) | ch(0);
+};
+
+/** Sky + lighting for a room. Boss arenas are dimmed so the boss's own glow dominates. */
+export function moodForRoom(roomNo: number): { sky: number; light: ThemeLighting } {
+  const { sky, light } = themeForRoom(roomNo);
+  if (isStageBossRoom(roomNo)) {
+    return {
+      sky: mixHex(sky, 0x140204, 0.8),
+      light: {
+        ...light,
+        hemiSky: mixHex(light.hemiSky, 0xff6a50, 0.55),
+        hemiGround: mixHex(light.hemiGround, 0x1a0204, 0.7),
+        hemiIntensity: light.hemiIntensity * 0.42,
+        sunColor: mixHex(light.sunColor, 0xff5a3a, 0.6),
+        sunIntensity: light.sunIntensity * 0.5,
+        envIntensity: light.envIntensity * 0.35,
+        exposure: light.exposure * 0.9,
+      },
+    };
+  }
+  if (isBossRoom(roomNo)) {
+    return {
+      sky: mixHex(sky, 0x0c0a18, 0.5),
+      light: { ...light, hemiIntensity: light.hemiIntensity * 0.7, sunIntensity: light.sunIntensity * 0.75, envIntensity: light.envIntensity * 0.6 },
+    };
+  }
+  return { sky, light };
+}

@@ -11,7 +11,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "assets": "node scripts/fetch-assets.mjs"
+    "assets": "node scripts/fetch-assets.mjs",
+    "assets:archer": "node scripts/build-archer.mjs",
+    "assets:bosses": "node scripts/build-bosses.mjs"
   },
   "dependencies": {
     "three": "^0.187.0"

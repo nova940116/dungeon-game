@@ -150,7 +150,9 @@ class AssetLibrary {
     const measure = spec.fit === 'height' ? raw.y : Math.max(raw.x, raw.y, raw.z);
     const scale = measure > 0 ? spec.size / measure : 1;
     const center = box.getCenter(new THREE.Vector3());
-    const offset = new THREE.Vector3(-center.x * scale, -box.min.y * scale, -center.z * scale);
+    // Characters keep their authored origin (between the feet); props are centered on their bounds.
+    const keepOrigin = spec.pivot === 'origin';
+    const offset = new THREE.Vector3(keepOrigin ? 0 : -center.x * scale, -box.min.y * scale, keepOrigin ? 0 : -center.z * scale);
     return { spec, source, clips, scale, offset, size: raw.multiplyScalar(scale) };
   }
 }

@@ -3,13 +3,15 @@
  * (see scripts/asset-sources.json) into public/assets/.
  */
 
-export type ClipName = 'idle' | 'move' | 'run' | 'attack' | 'shoot' | 'aim' | 'hit' | 'death' | 'jump' | 'punch';
+export type ClipName = 'idle' | 'move' | 'run' | 'attack' | 'hit' | 'death' | 'jump' | 'punch' | 'roar' | 'draw' | 'hold' | 'release';
 
 export interface ModelSpec {
   url: string;
   /** Scale so the model's height (or largest dimension) equals `size` world units. */
   fit: 'height' | 'max';
   size: number;
+  /** 'origin' keeps the file's origin (characters); default centers the bounds on x/z. */
+  pivot?: 'origin' | 'center';
   /** Extra yaw so the model faces +Z like the rest of the game. */
   rotationY?: number;
   /** Skinned + animated: instances get their own materials (for hit flash). */
@@ -22,9 +24,10 @@ const base = import.meta.env.BASE_URL;
 const model = (path: string) => `${base}assets/models/${path}`;
 
 export const MODELS = {
+  // Built by `npm run assets:archer` (Blender): adventurer + bow/string/arrow rig + archery clips.
   player: {
-    url: model('characters/player_adventurer.glb'), fit: 'height', size: 2.0, animated: true,
-    clips: { idle: 'Idle_Neutral', run: 'Run', hit: 'HitRecieve', death: 'Death' },
+    url: model('characters/player_archer.glb'), fit: 'height', size: 2.0, animated: true, pivot: 'origin',
+    clips: { idle: 'Bow_Idle', run: 'Run', draw: 'Bow_Draw', hold: 'Bow_Hold', release: 'Bow_Release', hit: 'HitRecieve', death: 'Death' },
   },
   slime: {
     url: model('characters/enemy_slime.glb'), fit: 'max', size: 1.4, animated: true,
@@ -42,12 +45,16 @@ export const MODELS = {
     url: model('characters/enemy_giant.glb'), fit: 'height', size: 2.5, animated: true,
     clips: { idle: 'Idle', move: 'Walk', attack: 'Attack', hit: 'HitRecieve', death: 'Death' },
   },
-  demon: {
-    url: model('characters/boss_demon.glb'), fit: 'height', size: 3.6, animated: true,
-    clips: { idle: 'Idle', move: 'Walk', run: 'Run', attack: 'Weapon', punch: 'Punch', jump: 'Jump', hit: 'HitReact', death: 'Death' },
+  // Bosses are modelled, rigged and animated from scratch by `npm run assets:bosses` (scripts/blender/boss_*.py).
+  golemBoss: {
+    url: model('characters/boss_golem.glb'), fit: 'height', size: 4.7, animated: true, pivot: 'origin',
+    clips: { idle: 'Idle', move: 'Walk', attack: 'Attack', punch: 'Punch', roar: 'Roar', death: 'Death' },
+  },
+  demonLord: {
+    url: model('characters/boss_demon_lord.glb'), fit: 'height', size: 6.7, animated: true, pivot: 'origin',
+    clips: { idle: 'Idle', move: 'Walk', run: 'Run', attack: 'Weapon', punch: 'Punch', jump: 'Jump', roar: 'Roar', death: 'Death' },
   },
 
-  bow: { url: model('props/weapon_bow.glb'), fit: 'max', size: 0.95 },
   arrow: { url: model('props/projectile_arrow.glb'), fit: 'max', size: 0.9 },
 
   wall: { url: model('environment/wall_stone.glb'), fit: 'max', size: 2 },

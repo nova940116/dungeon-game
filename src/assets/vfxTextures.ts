@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { shared } from './ModelKit';
 
 /** Procedurally drawn particle sprites (white, tinted at runtime). Created lazily, shared forever. */
-export type VfxTextureKey = 'glow' | 'star' | 'ring' | 'smoke' | 'portal';
+export type VfxTextureKey = 'glow' | 'star' | 'ring' | 'smoke' | 'portal' | 'rune';
 
 const cache = new Map<VfxTextureKey, THREE.Texture>();
 
@@ -83,6 +83,40 @@ const painters: Record<VfxTextureKey, () => THREE.Texture> = {
         const a = (i / 6) * Math.PI * 2;
         c.beginPath();
         c.arc(m, m, m * 0.62, a, a + 0.55);
+        c.stroke();
+      }
+    }),
+  // Summoning circle under bosses: rings, a pentagram and tick marks.
+  rune: () =>
+    draw(512, (c, s) => {
+      const m = s / 2;
+      c.strokeStyle = 'rgba(255,255,255,0.95)';
+      c.shadowColor = 'rgba(255,255,255,0.9)';
+      c.shadowBlur = 10;
+      const circle = (r: number, w: number) => {
+        c.lineWidth = w;
+        c.beginPath();
+        c.arc(m, m, m * r, 0, Math.PI * 2);
+        c.stroke();
+      };
+      circle(0.93, 7);
+      circle(0.8, 3);
+      circle(0.4, 3);
+      c.lineWidth = 4;
+      c.beginPath();
+      for (let i = 0; i <= 5; i++) {
+        const a = ((i * 2) / 5) * Math.PI * 2 - Math.PI / 2;
+        c.lineTo(m + Math.cos(a) * m * 0.8, m + Math.sin(a) * m * 0.8);
+      }
+      c.stroke();
+      c.lineWidth = 5;
+      for (let i = 0; i < 30; i++) {
+        const a = (i / 30) * Math.PI * 2;
+        const r0 = m * 0.83;
+        const r1 = m * (i % 3 === 0 ? 0.91 : 0.87);
+        c.beginPath();
+        c.moveTo(m + Math.cos(a) * r0, m + Math.sin(a) * r0);
+        c.lineTo(m + Math.cos(a) * r1, m + Math.sin(a) * r1);
         c.stroke();
       }
     }),

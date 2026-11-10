@@ -48,7 +48,7 @@ interface Decal {
   alpha: number;
 }
 
-const MAX_PARTICLES = 700;
+const MAX_PARTICLES = 900;
 const DECAL_GEOMETRY = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
 
 /**
@@ -140,6 +140,48 @@ export class EffectsSystem {
     for (let i = 0; i < 16; i++) {
       const a = (i / 16) * Math.PI * 2;
       this.emit({ x, y: 0.2, z, vx: Math.cos(a) * radius * 2, vz: Math.sin(a) * radius * 2, vy: 0.5, life: 0.45, size: [0.9, 1.6], color: 0xc8b8a0, alpha: 0.5, texture: 'smoke', additive: false, drag: 3 });
+    }
+  }
+
+  /** One rising spark of a boss's aura. */
+  ember(x: number, y: number, z: number, color: number): void {
+    this.emit({ x, y, z, vx: rand(-0.4, 0.4), vy: rand(1.6, 3.6), vz: rand(-0.4, 0.4), life: rand(0.6, 1.1), size: [rand(0.18, 0.34), 0.03], color, intensity: 2.8, texture: 'glow', drag: 0.4 });
+  }
+
+  /** Dark smoke curling off a boss. */
+  gloom(x: number, y: number, z: number): void {
+    this.emit({ x, y, z, vy: rand(0.5, 1.2), life: rand(0.8, 1.3), size: [0.7, 1.9], color: 0x140608, alpha: 0.5, texture: 'smoke', additive: false, spin: rand(-1.5, 1.5) });
+  }
+
+  /** Boss roar: stacked shockwaves racing outward. */
+  roar(x: number, z: number, radius: number, color: number): void {
+    this.decal(x, z, 0.6, radius * 2, 0.75, color, 1);
+    this.decal(x, z, 0.4, radius * 1.4, 0.6, color, 0.9);
+    this.decal(x, z, 0.2, radius * 0.8, 0.45, color, 0.6);
+    for (let i = 0; i < 28; i++) {
+      const a = (i / 28) * Math.PI * 2;
+      const s = radius * rand(1.2, 1.9);
+      this.emit({ x, y: rand(0.2, 1.5), z, vx: Math.cos(a) * s, vz: Math.sin(a) * s, vy: rand(0.5, 2.5), life: rand(0.4, 0.75), size: [0.5, 0.06], color, intensity: 2.8, texture: 'star', drag: 2.2 });
+    }
+  }
+
+  /** A telegraphed ground hazard going off: flame column, sparks, smoke and a ring. */
+  eruption(x: number, z: number, radius: number, color: number): void {
+    this.decal(x, z, radius * 0.6, radius * 2.6, 0.4, color, 1);
+    this.emit({ x, y: 0.5, z, life: 0.22, size: [radius * 1.6, radius * 2.4], color, intensity: 2.2, texture: 'glow' });
+    for (let i = 0; i < 9; i++) {
+      const a = rand(0, Math.PI * 2);
+      const r = rand(0, radius * 0.75);
+      this.emit({ x: x + Math.cos(a) * r, y: 0.2, z: z + Math.sin(a) * r, vy: rand(4, 9), life: rand(0.3, 0.55), size: [radius * 0.7, 0.1], color, intensity: 2.6, texture: 'glow', drag: 2 });
+    }
+    for (let i = 0; i < 8; i++) {
+      const a = rand(0, Math.PI * 2);
+      const s = rand(3, 7);
+      this.emit({ x, y: 0.3, z, vx: Math.cos(a) * s, vy: rand(3, 7), vz: Math.sin(a) * s, life: rand(0.35, 0.6), size: [0.3, 0.05], color, intensity: 2.6, texture: 'star', gravity: 12, drag: 1.5 });
+    }
+    for (let i = 0; i < 4; i++) {
+      const a = rand(0, Math.PI * 2);
+      this.emit({ x: x + Math.cos(a) * radius * 0.5, y: 0.4, z: z + Math.sin(a) * radius * 0.5, vy: rand(1, 2), life: rand(0.6, 0.9), size: [radius * 0.6, radius * 1.4], color: 0x2a2022, alpha: 0.5, texture: 'smoke', additive: false, spin: rand(-2, 2) });
     }
   }
 

@@ -1,5 +1,5 @@
 import { ROOM } from '../config';
-import { ENEMY_DEFS, enemyCountForRoom, enemyPoolForRoom, type EnemyType } from '../data/enemies';
+import { bossTypeForRoom, ENEMY_DEFS, enemyCountForRoom, enemyPoolForRoom, type EnemyType } from '../data/enemies';
 import { pickOne, rand, randInt } from '../utils/math';
 import { aabbFromCenter, aabbOverlaps, resolveCircleVsBoxes, type AABB } from './Collision';
 
@@ -39,7 +39,7 @@ export function generateObstacles(isBoss: boolean): AABB[] {
 }
 
 export function generateWave(roomNo: number, isBoss: boolean, obstacles: readonly AABB[]): SpawnSpec[] {
-  if (isBoss) return [{ type: 'boss', x: 0, z: -6 }];
+  if (isBoss) return [{ type: bossTypeForRoom(roomNo) ?? 'midboss', x: 0, z: -6 }];
 
   const pool = enemyPoolForRoom(roomNo);
   const counts = new Map<EnemyType, number>();

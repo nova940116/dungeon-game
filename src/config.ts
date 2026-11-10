@@ -18,11 +18,18 @@ export const CAMERA = {
 } as const;
 
 export const BALANCE = {
+  /** A boss room closes every chapter: a mid-boss, except on stage-boss rooms. */
   bossEvery: 5,
+  /** Every Nth room is a stage boss (must be a multiple of `bossEvery`). */
+  stageBossEvery: 10,
   enemyHpPerRoom: 0.2,
   enemyDmgPerRoom: 0.07,
   enemyBulletDamage: 10,
   enemySpawnTime: 0.8,
+  /** Bosses take longer to materialize (intro banner + roar). */
+  bossSpawnTime: 2.2,
+  /** Telegraphed ground explosions (boss meteors / quakes). */
+  hazardDamage: 16,
   arrowSpeed: 17,
   arrowLife: 1.6,
   playerBaseHp: 100,

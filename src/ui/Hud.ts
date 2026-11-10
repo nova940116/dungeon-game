@@ -13,6 +13,14 @@ export interface SkillBadge {
   maxStacks: number;
 }
 
+export interface BossBanner {
+  title: string;
+  name: string;
+  stage: boolean;
+  /** HP ratios marked on the bar (phase thresholds). */
+  phaseAt: readonly number[];
+}
+
 export interface StatSummary {
   damage: number;
   attacksPerSecond: number;
@@ -34,7 +42,16 @@ export class Hud {
   private readonly pauseButton = requireElement<HTMLButtonElement>('hud-pause');
   private readonly stats = requireElement('hud-stats');
   private readonly skills = requireElement('hud-skills');
+  private readonly bossBar = requireElement('boss-bar');
+  private readonly bossTitle = requireElement('boss-bar-title');
+  private readonly bossName = requireElement('boss-bar-name');
+  private readonly bossFill = requireElement('boss-bar-fill');
+  private readonly bossGhost = requireElement('boss-bar-ghost');
+  private readonly bossMarks = requireElement('boss-bar-marks');
+  private readonly bossIntro = requireElement('boss-intro');
+  private readonly dread = requireElement('dread-vignette');
   private toastTime = 0;
+  private introTime = 0;
 
   /** Mute button + "M" shortcut. `toggle` returns the new muted state. */
   bindSoundToggle(muted: boolean, toggle: () => boolean): void {
@@ -108,6 +125,35 @@ export class Hud {
     this.toastTime = seconds;
   }
 
+  /** Boss fight UI: intro banner, the big HP bar with phase marks and (for stage bosses) a dread vignette. */
+  showBoss(boss: BossBanner): void {
+    this.bossTitle.textContent = boss.title;
+    this.bossName.textContent = boss.name;
+    this.bossMarks.replaceChildren(...boss.phaseAt.map((ratio) => h('i', { attrs: { style: `left:${ratio * 100}%` } })));
+    this.bossBar.classList.toggle('boss-bar--stage', boss.stage);
+    this.bossBar.classList.add('is-visible');
+    this.setBossHealth(1);
+
+    this.bossIntro.replaceChildren(h('span', { className: 'boss-intro__title' }, `⚠ ${boss.title} ⚠`), h('strong', { className: 'boss-intro__name' }, boss.name));
+    this.bossIntro.classList.toggle('boss-intro--stage', boss.stage);
+    this.bossIntro.classList.add('is-visible');
+    this.introTime = boss.stage ? 2.6 : 2.1;
+    this.dread.classList.toggle('is-visible', boss.stage);
+  }
+
+  setBossHealth(ratio: number): void {
+    const width = `${clamp(ratio, 0, 1) * 100}%`;
+    this.bossFill.style.width = width;
+    this.bossGhost.style.width = width; // trails behind via a slower CSS transition
+  }
+
+  hideBoss(): void {
+    this.bossBar.classList.remove('is-visible');
+    this.bossIntro.classList.remove('is-visible');
+    this.dread.classList.remove('is-visible');
+    this.introTime = 0;
+  }
+
   flashHurt(): void {
     this.vignette.classList.add('is-visible');
     window.setTimeout(() => this.vignette.classList.remove('is-visible'), 150);
@@ -119,6 +165,10 @@ export class Hud {
   }
 
   update(dt: number): void {
+    if (this.introTime > 0) {
+      this.introTime -= dt;
+      if (this.introTime <= 0) this.bossIntro.classList.remove('is-visible');
+    }
     if (this.toastTime <= 0) return;
     this.toastTime -= dt;
     if (this.toastTime <= 0) this.toastEl.classList.remove('is-visible');

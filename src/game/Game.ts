@@ -5,11 +5,14 @@ import { CameraRig } from '../engine/CameraRig';
 import { Engine } from '../engine/Engine';
 import { EventBus } from '../engine/EventBus';
 import { Input } from '../engine/Input';
+import { moodForRoom } from '../data/themes';
+import type { BossEnemy } from '../entities/enemies/BossEnemy';
 import { Player } from '../entities/Player';
 import { AudioSystem } from '../systems/AudioSystem';
 import { CombatSystem } from '../systems/CombatSystem';
 import { EffectsSystem } from '../systems/EffectsSystem';
 import { EnemySystem } from '../systems/EnemySystem';
+import { HazardSystem } from '../systems/HazardSystem';
 import { PickupSystem } from '../systems/PickupSystem';
 import { ProgressionSystem, type SkillOffer } from '../systems/ProgressionSystem';
 import { WeaponSystem } from '../systems/WeaponSystem';
@@ -19,6 +22,7 @@ import { Screens } from '../ui/Screens';
 import { storage } from '../utils/storage';
 import { Room } from '../world/Room';
 import { generateWave } from '../world/RoomGenerator';
+import type { Enemy } from '../entities/Enemy';
 import type { GameEvents } from './events';
 import { World } from './World';
 
@@ -43,6 +47,7 @@ export class Game {
   private readonly weapons = new WeaponSystem();
   private readonly enemySystem = new EnemySystem();
   private readonly combat = new CombatSystem();
+  private readonly hazards = new HazardSystem();
   private readonly pickups = new PickupSystem();
 
   private readonly hud = new Hud();
@@ -55,6 +60,8 @@ export class Game {
 
   private state: GameState = 'loading';
   private footstepTimer = 0;
+  /** The boss currently being fought (drives the HUD boss bar). */
+  private boss: Enemy | null = null;
 
   constructor(container: HTMLElement) {
     this.engine = new Engine(container);
@@ -112,6 +119,7 @@ export class Game {
     this.world.room.update(dt, elapsed);
     this.cameraRig.update(dt, this.player.z);
     this.damageNumbers.update(dt, this.engine.camera);
+    if (this.boss) this.hud.setBossHealth(this.boss.hp / this.boss.maxHp);
     this.hud.update(dt);
     this.audioSystem.update(dt);
   }
@@ -128,6 +136,7 @@ export class Game {
     this.weapons.update(dt, world, moving);
     this.enemySystem.update(dt, world);
     this.combat.update(dt, world);
+    this.hazards.update(dt, world);
     this.pickups.update(dt, elapsed, world, this.progression);
     world.collectGarbage();
 
@@ -214,8 +223,10 @@ export class Game {
     world.roomNo = roomNo;
     const room = new Room(roomNo);
     world.setRoom(room);
-    this.engine.setAtmosphere(room.theme.sky);
-    this.engine.applyLighting(room.theme.light);
+    const mood = moodForRoom(roomNo);
+    this.engine.setAtmosphere(mood.sky);
+    this.engine.applyLighting(mood.light);
+    this.endBossFight();
     player.placeAt(room.entrance);
     this.weapons.reset();
     this.cameraRig.snapTo(player.z);
@@ -225,7 +236,7 @@ export class Game {
     this.events.emit('room:entered', { roomNo, isBoss: room.isBoss });
     for (const spawn of generateWave(roomNo, room.isBoss, room.obstacles)) world.spawnEnemy(spawn.type, spawn.x, spawn.z);
     const firstOfChapter = roomNo % BALANCE.bossEvery === 1;
-    this.hud.toast(room.isBoss ? '⚠ 보스 방 ⚠' : firstOfChapter ? room.theme.name : `방 ${roomNo}`);
+    if (!room.isBoss) this.hud.toast(firstOfChapter ? room.theme.name : `방 ${roomNo}`); // bosses announce themselves
   }
 
   private async advanceRoom(): Promise<void> {
@@ -245,6 +256,19 @@ export class Game {
     this.events.emit('room:cleared', { roomNo: room.roomNo, isBoss: room.isBoss });
     this.hud.toast('방 클리어! ↑ 위로 이동');
     if (room.isBoss) this.world.healPlayer(this.player.maxHp * BALANCE.bossClearHealRatio);
+  }
+
+  private beginBossFight(boss: Enemy): void {
+    const info = boss.def.bossInfo;
+    if (!info) return;
+    this.boss = boss;
+    this.hud.showBoss(info);
+    this.cameraRig.shake(info.stage ? 0.5 : 0.3);
+  }
+
+  private endBossFight(): void {
+    this.boss = null;
+    this.hud.hideBoss();
   }
 
   private openSkillPick(): void {
@@ -284,7 +308,12 @@ export class Game {
     events.on('enemy:damaged', ({ enemy, amount, critical }) =>
       this.damageNumbers.spawn(enemy.x, enemy.centerY + 0.4, enemy.z, critical ? `${amount}!` : `${amount}`, critical ? 'crit' : 'normal'),
     );
-    events.on('enemy:killed', ({ enemy }) => enemy.isBoss && this.cameraRig.shake(0.6));
+    events.on('enemy:spawned', ({ enemy }) => enemy.isBoss && this.beginBossFight(enemy));
+    events.on('enemy:killed', ({ enemy }) => {
+      if (!enemy.isBoss) return;
+      this.cameraRig.shake(0.7);
+      if (enemy === this.boss) this.endBossFight();
+    });
     events.on('player:damaged', ({ amount }) => {
       this.damageNumbers.spawn(player.x, 1.9, player.z, `-${amount}`, 'hurt');
       this.hud.flashHurt();
@@ -299,7 +328,12 @@ export class Game {
       this.refreshHealth();
     });
     events.on('player:died', () => this.gameOver());
-    events.on('boss:enraged', () => this.hud.toast('보스가 분노했다!'));
+    events.on('boss:phase', ({ enemy, phase }) => {
+      const info = (enemy as BossEnemy).info;
+      this.hud.toast(info.phaseToasts[phase - 1] ?? `${info.name}이(가) 분노했다!`, 2.2);
+      this.hud.flashHurt();
+    });
+    events.on('hazard:exploded', () => this.cameraRig.shake(0.12));
     events.on('camera:shake', ({ intensity }) => this.cameraRig.shake(intensity));
     events.on('xp:changed', ({ xp, needed, level }) => this.hud.setXp(xp / needed, level));
     events.on('level:up', ({ level }) => {

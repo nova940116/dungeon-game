@@ -18,8 +18,11 @@ describe('RoomGenerator', () => {
     }
   });
 
-  it('spawns a single boss in boss rooms', () => {
-    expect(generateWave(5, true, [])).toEqual([{ type: 'boss', x: 0, z: -6 }]);
+  it('spawns a single mid-boss on room 5 and a stage boss on room 10', () => {
+    expect(generateWave(5, true, [])).toEqual([{ type: 'midboss', x: 0, z: -6 }]);
+    expect(generateWave(10, true, [])).toEqual([{ type: 'boss', x: 0, z: -6 }]);
+    expect(generateWave(15, true, [])).toEqual([{ type: 'midboss', x: 0, z: -6 }]);
+    expect(generateWave(20, true, [])).toEqual([{ type: 'boss', x: 0, z: -6 }]);
   });
 
   it('never spawns enemies inside rocks and respects per-room caps', () => {

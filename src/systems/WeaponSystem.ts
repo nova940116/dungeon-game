@@ -6,7 +6,8 @@ import { angleTo, distance } from '../utils/math';
 const VOLLEY_GAP = 0.13;
 const DIAGONAL_STEP = 0.42;
 const FRONT_SPACING = 0.3;
-const MOVE_FIRE_DELAY = 0.12;
+/** Delay before the first shot after stopping — long enough to see the bow being drawn. */
+const MOVE_FIRE_DELAY = 0.24;
 
 interface QueuedVolley {
   delay: number;

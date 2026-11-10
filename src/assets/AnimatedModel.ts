@@ -19,7 +19,7 @@ export class AnimatedModel {
   private readonly mixer: THREE.AnimationMixer;
   private readonly actions = new Map<ClipName, THREE.AnimationAction>();
   private readonly materials: THREE.MeshStandardMaterial[];
-  private readonly baseEmissive: number[];
+  private baseEmissive: number[];
   private current: THREE.AnimationAction | null = null;
   private loopName: ClipName = 'idle';
   private oneShot: THREE.AnimationAction | null = null;
@@ -48,6 +48,26 @@ export class AnimatedModel {
 
   get isPlayingOneShot(): boolean {
     return this.oneShot !== null;
+  }
+
+  /** Logical name of the one-shot currently playing, if any. */
+  get oneShotName(): ClipName | null {
+    if (!this.oneShot) return null;
+    for (const [name, action] of this.actions) if (action === this.oneShot) return name;
+    return null;
+  }
+
+  /** Clip length in seconds (0 if the model doesn't have it). */
+  duration(name: ClipName): number {
+    return this.actions.get(name)?.getClip().duration ?? 0;
+  }
+
+  /** Cuts a one-shot short and blends back to the current loop. */
+  stopOneShot(fade = 0.12): void {
+    if (!this.oneShot || this.holdOneShot) return;
+    this.oneShot = null;
+    const loop = this.actions.get(this.loopName);
+    if (loop) this.crossFadeTo(loop, fade, true);
   }
 
   /** Sets the looping base animation. Cheap to call every frame. */
@@ -88,6 +108,46 @@ export class AnimatedModel {
     if (color === this.flashColor) return;
     this.flashColor = color;
     this.materials.forEach((m, i) => m.emissive.setHex(color ?? this.baseEmissive[i]));
+  }
+
+  /** This instance's own materials with one of the given names (as authored in the model file). */
+  materialsNamed(...names: string[]): THREE.MeshStandardMaterial[] {
+    return this.materials.filter((m) => names.includes(m.name));
+  }
+
+  /** Restyles this instance's materials (boss looks). The result becomes the look hit flashes restore to. */
+  restyle(fn: (material: THREE.MeshStandardMaterial) => void): void {
+    this.setFlash(null);
+    this.materials.forEach(fn);
+    this.baseEmissive = this.materials.map((m) => m.emissive.getHex());
+  }
+
+  /** Gives one mesh its own copy of its material (e.g. a glowing weapon) and returns it. */
+  isolateMaterial(meshName: string): THREE.MeshStandardMaterial | null {
+    const target = this.findObject(meshName);
+    if (!(target instanceof THREE.Mesh)) return null;
+    this.setFlash(null);
+    const own = (target.material as THREE.MeshStandardMaterial).clone();
+    target.material = own;
+    this.materials.push(own);
+    this.baseEmissive.push(own.emissive.getHex());
+    return own;
+  }
+
+  /**
+   * Returns a group that follows a bone but is expressed in model space: world-unit scale,
+   * +Y up, +Z forward, origin at the bone. Use it to bolt props (horns, wings…) onto a skeleton.
+   */
+  attach(boneName: string): THREE.Group | null {
+    const bone = this.findObject(boneName);
+    if (!bone) return null;
+    this.root.updateMatrixWorld(true);
+    const boneToRoot = this.root.matrixWorld.clone().invert().multiply(bone.matrixWorld);
+    const origin = new THREE.Vector3().setFromMatrixPosition(boneToRoot);
+    const holder = new THREE.Group();
+    boneToRoot.invert().multiply(new THREE.Matrix4().makeTranslation(origin.x, origin.y, origin.z)).decompose(holder.position, holder.quaternion, holder.scale);
+    bone.add(holder);
+    return holder;
   }
 
   /** Finds a node by its name in the source file (GLTFLoader strips characters like "." from names). */

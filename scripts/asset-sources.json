@@ -1,14 +1,14 @@
 {
-  "$comment": "Third-party asset sources. All must be CC0. Run `npm run assets` to (re)build public/assets.",
+  "$comment": "Third-party asset sources. All must be CC0. Run `npm run assets` to (re)build public/assets. Entries with \"blender\" instead of \"out\" are only cached as inputs for `npm run assets:archer`.",
   "models": [
-    { "out": "characters/player_adventurer.glb", "polypizza": "y9KWOVG21R" },
+    { "blender": "player body (armour)",  "polypizza": "I1gTjmuK2m" },
+    { "blender": "player head",           "polypizza": "5EGWBMpuXq" },
+    { "blender": "player bow",            "polypizza": "QnpqjLSKFU" },
     { "out": "characters/enemy_slime.glb",       "polypizza": "LyjSUKHKnh" },
     { "out": "characters/enemy_bat.glb",         "polypizza": "hNO9XvjlKa" },
     { "out": "characters/enemy_mushnub.glb",     "polypizza": "LWKmS30Xxl" },
     { "out": "characters/enemy_giant.glb",       "polypizza": "BldaiPtyJa" },
-    { "out": "characters/boss_demon.glb",        "polypizza": "LnfIziKv4o" },
 
-    { "out": "props/weapon_bow.glb",             "polypizza": "QnpqjLSKFU" },
     { "out": "props/projectile_arrow.glb",       "polypizza": "Rt48KEPDGt" },
 
     { "out": "environment/wall_stone.glb",       "polypizza": "CkF171SeTV" },

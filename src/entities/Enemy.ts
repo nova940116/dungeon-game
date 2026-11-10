@@ -39,7 +39,8 @@ export abstract class Enemy {
 
   protected t = rand(0, 2);
   protected timer = rand(0.8, 2);
-  private spawnTimer: number = BALANCE.enemySpawnTime;
+  private readonly spawnTime: number;
+  private spawnTimer: number;
   private flashTimer = 0;
   private deathTimer = 0;
 
@@ -51,12 +52,14 @@ export abstract class Enemy {
     difficulty: Difficulty,
   ) {
     this.def = ENEMY_DEFS[type];
+    this.spawnTimer = this.spawnTime = this.def.boss ? BALANCE.bossSpawnTime : BALANCE.enemySpawnTime;
     this.radius = this.def.radius;
     this.x = x;
     this.z = z;
     this.hp = this.maxHp = this.def.hp * difficulty.hpMul;
     this.contactDamage = this.def.contactDamage * difficulty.dmgMul;
     this.bar = new HealthBar(Math.max(0.9, this.radius * 1.6), this.def.boss ? 0xff3b3b : 0xf87171);
+    this.bar.root.visible = !this.def.boss; // bosses use the big HUD bar instead
     this.model = new AnimatedModel(modelKey);
     this.root.position.set(x, this.def.hoverY, z);
     this.root.scale.setScalar(0.01);
@@ -69,6 +72,11 @@ export abstract class Enemy {
 
   get isBoss(): boolean {
     return this.def.boss;
+  }
+
+  /** Still materializing: can be hit but doesn't act yet. */
+  get spawning(): boolean {
+    return this.spawnTimer > 0;
   }
 
   /** Height used for hit effects / damage numbers. */
@@ -91,7 +99,9 @@ export abstract class Enemy {
     this.t += dt;
     if (this.spawnTimer > 0) {
       this.spawnTimer -= dt;
-      this.root.scale.setScalar(clamp(1 - this.spawnTimer / BALANCE.enemySpawnTime, 0.01, 1));
+      const k = clamp(1 - this.spawnTimer / this.spawnTime, 0.01, 1);
+      this.root.scale.setScalar(1 - (1 - k) * (1 - k)); // ease-out
+      if (this.spawnTimer <= 0) this.onSpawned(world);
       return;
     }
     this.think(dt, world);
@@ -139,6 +149,9 @@ export abstract class Enemy {
   }
 
   protected abstract think(dt: number, world: World): void;
+
+  /** Called once, when the spawn animation ends and the enemy starts acting. */
+  protected onSpawned(_world: World): void {}
 
   /** Integrates velocity and resolves collisions. Returns true if blocked. */
   protected move(dt: number, world: World): boolean {

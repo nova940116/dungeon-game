@@ -1,9 +1,10 @@
 import type * as THREE from 'three';
 import { BALANCE } from '../config';
 import type { EventBus } from '../engine/EventBus';
-import type { EnemyType } from '../data/enemies';
+import { ENEMY_DEFS, type EnemyType } from '../data/enemies';
 import type { Difficulty, Enemy } from '../entities/Enemy';
 import { createEnemy } from '../entities/enemies';
+import { Hazard } from '../entities/Hazard';
 import type { Player } from '../entities/Player';
 import { Arrow } from '../entities/projectiles/Arrow';
 import { EnemyBullet } from '../entities/projectiles/EnemyBullet';
@@ -18,8 +19,8 @@ const DEATH_COLORS: Partial<Record<EnemyType, number>> = {
   bat: 0xc58bff,
   shooter: 0x5ab8ff,
   golem: 0xffb070,
-  boss: 0xff4a2a,
 };
+const MINION_SPAWN_COLOR = 0xb46bff;
 
 /**
  * Container for everything alive in the current room, plus spawn / damage helpers.
@@ -29,6 +30,7 @@ export class World {
   readonly enemies: Enemy[] = [];
   readonly arrows: Arrow[] = [];
   readonly bullets: EnemyBullet[] = [];
+  readonly hazards: Hazard[] = [];
   readonly orbs: XpOrb[] = [];
   roomNo = 1;
 
@@ -67,7 +69,7 @@ export class World {
     const enemy = createEnemy(type, x, z, this.difficulty);
     this.scene.add(...enemy.sceneObjects);
     this.enemies.push(enemy);
-    this.effects.spawn(x, z, type === 'boss' ? 0xff4a2a : 0xb46bff);
+    this.effects.spawn(x, z, ENEMY_DEFS[type].bossInfo?.color ?? MINION_SPAWN_COLOR);
     this.events.emit('enemy:spawned', { enemy });
     return enemy;
   }
@@ -83,6 +85,13 @@ export class World {
     const bullet = new EnemyBullet(x, z, angle, speed, damage, heavy);
     this.scene.add(bullet.mesh);
     this.bullets.push(bullet);
+  }
+
+  /** Telegraphed ground explosion: warns for `delay` seconds, then damages the player if inside. */
+  spawnHazard(x: number, z: number, radius: number, delay: number, color: number): void {
+    const hazard = new Hazard(x, z, radius, delay, BALANCE.hazardDamage * this.difficulty.dmgMul, color);
+    this.scene.add(hazard.mesh);
+    this.hazards.push(hazard);
   }
 
   dropXp(x: number, z: number, total: number): void {
@@ -109,11 +118,24 @@ export class World {
   killEnemy(enemy: Enemy): void {
     if (enemy.dead) return;
     enemy.die();
-    this.effects.death(enemy.x, enemy.centerY, enemy.z, DEATH_COLORS[enemy.type] ?? 0xffe08a, enemy.isBoss);
+    const color = enemy.def.bossInfo?.color ?? DEATH_COLORS[enemy.type] ?? 0xffe08a;
+    this.effects.death(enemy.x, enemy.centerY, enemy.z, color, enemy.isBoss);
     this.dropXp(enemy.x, enemy.z, enemy.def.xp);
     const lifesteal = this.player.stats.lifestealOnKill;
     if (lifesteal > 0) this.healPlayer(this.player.maxHp * lifesteal, true);
     this.events.emit('enemy:killed', { enemy });
+    if (enemy.isBoss) this.endBossFight(enemy, color);
+  }
+
+  /** A boss's death ends the fight: its attacks fizzle out and its minions fall with it. */
+  private endBossFight(boss: Enemy, color: number): void {
+    this.effects.roar(boss.x, boss.z, boss.radius * 6, color);
+    for (const b of this.bullets) {
+      b.dead = true;
+      this.effects.pop(b.x, 0.8, b.z, b.color);
+    }
+    for (const h of this.hazards) h.dead = true;
+    for (const other of [...this.enemies]) if (!other.isBoss) this.killEnemy(other);
   }
 
   /** Removes and disposes everything that is finished. Dead enemies stay until their death animation ends. */
@@ -121,13 +143,14 @@ export class World {
     removeWhere(this.enemies, (e) => e.removable, (e) => e.dispose());
     removeWhere(this.arrows, (a) => a.dead, (a) => a.mesh.removeFromParent());
     removeWhere(this.bullets, (b) => b.dead, (b) => b.mesh.removeFromParent());
+    removeWhere(this.hazards, (h) => h.dead, (h) => h.mesh.removeFromParent());
     removeWhere(this.orbs, (o) => o.dead, (o) => o.mesh.removeFromParent());
   }
 
   /** Clears all room-scoped entities immediately (between rooms / on restart). */
   clearDynamic(): void {
     removeWhere(this.enemies, () => true, (e) => e.dispose());
-    for (const list of [this.arrows, this.bullets, this.orbs]) for (const item of list) item.dead = true;
+    for (const list of [this.arrows, this.bullets, this.hazards, this.orbs]) for (const item of list) item.dead = true;
     this.collectGarbage();
   }
 }

@@ -4,14 +4,14 @@ import { AnimatedModel } from '../assets/AnimatedModel';
 import { HealthBar } from '../assets/models/HealthBar';
 import type { Room } from '../world/Room';
 import { clamp, dampAngle, type Vec2 } from '../utils/math';
-import { ArcheryRig } from './ArcheryRig';
 import { createDefaultStats, type PlayerStats } from './PlayerStats';
 
 const MOVE_THRESHOLD = 0.15;
-/** The source rig ships with a sword we don't use. */
-const HIDDEN_PARTS = ['Sword'];
-/** Fraction of the attack interval spent pulling the string; the rest is held at full draw. */
-const DRAW_PORTION = 0.75;
+/** Share of the attack interval the release (follow-through + re-nock) may take at most. */
+const RELEASE_SHARE = 0.4;
+/** Draw never plays slower than its authored speed, nor faster than this. */
+const MAX_ANIM_SPEED = 6;
+const MIN_DRAW_TIME = 0.12;
 
 export class Player {
   readonly radius = 0.42;
@@ -28,18 +28,15 @@ export class Player {
   /** Set by the weapon system each frame when a target is in range. */
   aiming = false;
 
-  private readonly archery: ArcheryRig;
+  /** True once the string is drawn for the coming shot (cleared on release). */
+  private drawn = false;
   private invulnerable = 0;
   private hurtFlash = 0;
   private moving = false;
 
   constructor() {
+    // Bow, string and arrow are part of the model; the clips animate them (see scripts/blender/build_archer.py).
     this.model = new AnimatedModel('player');
-    for (const name of HIDDEN_PARTS) {
-      const part = this.model.findObject(name);
-      if (part) part.visible = false;
-    }
-    this.archery = new ArcheryRig(this.model);
   }
 
   get root(): THREE.Group {
@@ -69,7 +66,7 @@ export class Player {
     this.root.visible = true;
     this.bar.root.visible = true;
     this.model.reset();
-    this.archery.reset();
+    this.drawn = false;
   }
 
   placeAt(p: Vec2): void {
@@ -124,22 +121,43 @@ export class Player {
     this.hp += amount;
   }
 
-  /** An arrow left the bow: snap the string and follow through. */
+  /** An arrow left the bow: string snaps, follow-through, then the hand goes back to the string. */
   releaseArrow(): void {
-    this.archery.release();
+    const length = this.model.duration('release');
+    const budget = this.stats.attackInterval * RELEASE_SHARE;
+    this.model.playOnce('release', { fade: 0.03, timeScale: clamp(length / Math.min(length, budget), 1, MAX_ANIM_SPEED) });
+    this.drawn = false;
+  }
+
+  /**
+   * Archery state: aim → draw (timed to land on the next shot) → hold at full draw → release.
+   * Moving or losing the target cancels the draw.
+   */
+  private updateArchery(): void {
+    const shooting = this.alive && this.aiming && !this.moving;
+    const current = this.model.oneShotName;
+    if (!shooting) {
+      if (current === 'draw' || current === 'release') this.model.stopOneShot(0.15);
+      this.drawn = false;
+      return;
+    }
+    if (this.drawn || current !== null) return; // drawing / releasing / flinching
+    const length = this.model.duration('draw');
+    const time = clamp(this.attackCooldown * 0.95, MIN_DRAW_TIME, length);
+    this.model.playOnce('draw', { fade: 0.06, timeScale: Math.min(length / time, MAX_ANIM_SPEED) });
+    this.drawn = true;
   }
 
   /** Visual sync: animation state, turning, invulnerability blink, HP bar. */
   update(dt: number, cameraRotation: THREE.Quaternion): void {
-    this.archery.restore();
     if (this.alive) {
-      this.model.setLoop(this.moving ? 'run' : 'idle', 0.15, this.moving ? this.stats.moveSpeed / 6 : 1);
+      const shooting = this.aiming && !this.moving;
+      this.model.setLoop(this.moving ? 'run' : shooting ? 'hold' : 'idle', 0.15, this.moving ? this.stats.moveSpeed / 6 : 1);
+      this.updateArchery();
       this.root.rotation.y = dampAngle(this.root.rotation.y, this.face, 18, dt);
     }
     this.model.update(dt);
     this.root.position.set(this.x, 0, this.z);
-    const drawProgress = 1 - this.attackCooldown / this.stats.attackInterval;
-    this.archery.update(dt, this.alive && this.aiming && !this.moving, clamp(drawProgress / DRAW_PORTION, 0, 1));
     if (!this.alive) return;
 
     this.invulnerable = Math.max(0, this.invulnerable - dt);

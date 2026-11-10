@@ -11,6 +11,7 @@ const DEATH_SOUNDS: Record<EnemyType, SoundKey> = {
   bat: 'bat_die',
   shooter: 'shooter_die',
   golem: 'golem_die',
+  midboss: 'boss_die',
   boss: 'boss_die',
 };
 
@@ -44,11 +45,13 @@ export class AudioSystem {
         cast: 'boss_cast',
         charge: 'boss_charge',
         impact: 'boss_impact',
+        roar: 'boss_roar',
       };
       this.at(key[kind], enemy.x);
     });
     events.on('enemy:killed', ({ enemy }) => this.at(DEATH_SOUNDS[enemy.type], enemy.x));
-    events.on('boss:enraged', () => this.audio.play('boss_roar', { rate: 0.75 }));
+    events.on('boss:phase', () => this.audio.play('boss_roar', { rate: 0.75 }));
+    events.on('hazard:exploded', ({ x }) => this.at('boss_impact', x, 0.55));
 
     events.on('player:damaged', () => this.audio.play('player_hurt'));
     events.on('player:died', () => {

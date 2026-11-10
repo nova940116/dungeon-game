@@ -1,6 +1,6 @@
 import type { Enemy } from '../entities/Enemy';
 
-export type EnemyAttackKind = 'bite' | 'spit' | 'throw' | 'slam' | 'cast' | 'charge' | 'impact';
+export type EnemyAttackKind = 'bite' | 'spit' | 'throw' | 'slam' | 'cast' | 'charge' | 'impact' | 'roar';
 
 /** Every cross-system event in the game. UI and feedback (sound, shake, numbers) subscribe to these. */
 export interface GameEvents {
@@ -14,7 +14,9 @@ export interface GameEvents {
   'player:healed': { amount: number; silent: boolean };
   'player:died': null;
   'pickup:collected': { x: number; z: number };
-  'boss:enraged': null;
+  /** A boss crossed an HP threshold. `phase` is 1 for the first transition; `last` marks the final one. */
+  'boss:phase': { enemy: Enemy; phase: number; last: boolean };
+  'hazard:exploded': { x: number; z: number; radius: number };
   'camera:shake': { intensity: number };
   'xp:changed': { xp: number; needed: number; level: number };
   'level:up': { level: number };

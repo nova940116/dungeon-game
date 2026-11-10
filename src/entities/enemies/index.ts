@@ -3,6 +3,7 @@ import type { Difficulty, Enemy } from '../Enemy';
 import { Bat } from './Bat';
 import { Boss } from './Boss';
 import { Golem } from './Golem';
+import { MidBoss } from './MidBoss';
 import { Shooter } from './Shooter';
 import { Slime } from './Slime';
 
@@ -13,6 +14,7 @@ const REGISTRY: Record<EnemyType, EnemyCtor> = {
   bat: Bat,
   shooter: Shooter,
   golem: Golem,
+  midboss: MidBoss,
   boss: Boss,
 };
 
