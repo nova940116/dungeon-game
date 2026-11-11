@@ -1,94 +1,445 @@
 {
   "$comment": "Third-party asset sources. All must be CC0. Run `npm run assets` to (re)build public/assets. Entries with \"blender\" instead of \"out\" are only cached as inputs for `npm run assets:archer`.",
   "models": [
-    { "blender": "player body (armour)",  "polypizza": "I1gTjmuK2m" },
-    { "blender": "player head",           "polypizza": "5EGWBMpuXq" },
-    { "blender": "player bow",            "polypizza": "QnpqjLSKFU" },
-    { "out": "characters/enemy_slime.glb",       "polypizza": "LyjSUKHKnh" },
-    { "out": "characters/enemy_bat.glb",         "polypizza": "hNO9XvjlKa" },
-    { "out": "characters/enemy_mushnub.glb",     "polypizza": "LWKmS30Xxl" },
-    { "out": "characters/enemy_giant.glb",       "polypizza": "BldaiPtyJa" },
-
-    { "out": "props/projectile_arrow.glb",       "polypizza": "Rt48KEPDGt" },
-
-    { "out": "environment/wall_stone.glb",       "polypizza": "CkF171SeTV" },
-    { "out": "environment/rock_a.glb",           "polypizza": "RtLRqYjfMs" },
-    { "out": "environment/rock_b.glb",           "polypizza": "4MUaQTcDdc" },
-    { "out": "environment/rocks_dark.glb",       "polypizza": "OQvi8PIZ40" },
-    { "out": "environment/boulder.glb",          "polypizza": "54jZKTAt5p" },
-    { "out": "environment/torch.glb",            "polypizza": "Gq38E7hFZw" },
-    { "out": "environment/crystal.glb",          "polypizza": "pf5lzmgr2J" },
-    { "out": "environment/mushroom.glb",         "polypizza": "db1tjMhmiA" },
-
-    { "out": "environment/tree_pine.glb",        "polypizza": "79gmlLnweB" },
-    { "out": "environment/tree_round.glb",       "polypizza": "2paAm1ja4w" },
-    { "out": "environment/tree_pine_snow.glb",   "polypizza": "17vQv2X5rh" },
-    { "out": "environment/tree_dead.glb",        "polypizza": "MlmK5488ou" },
-    { "out": "environment/tree_dead_snow.glb",   "polypizza": "PILl2nbDNz" },
-    { "out": "environment/tree_palm.glb",        "polypizza": "A6cKJYFsIb" },
-    { "out": "environment/cactus.glb",           "polypizza": "HsEJgRLQWX" },
-
-    { "out": "environment/bush.glb",             "polypizza": "ooG6CkLyE8" },
-    { "out": "environment/bush_flowers.glb",     "polypizza": "U1ymDy8tbY" },
-    { "out": "environment/bush_snow.glb",        "polypizza": "H4IEAwYl1z" },
-    { "out": "environment/grass.glb",            "polypizza": "UGTOzcO3P2" },
-    { "out": "environment/flowers.glb",          "polypizza": "NBUxHir6FJ" },
-    { "out": "environment/skull.glb",            "polypizza": "YgmRBtFlcF" },
-    { "out": "environment/ribcage.glb",          "polypizza": "A67un3x9nV" }
+    {
+      "blender": "player body (armour)",
+      "polypizza": "I1gTjmuK2m"
+    },
+    {
+      "blender": "player head",
+      "polypizza": "5EGWBMpuXq"
+    },
+    {
+      "blender": "player bow",
+      "polypizza": "QnpqjLSKFU"
+    },
+    {
+      "out": "characters/enemy_slime.glb",
+      "polypizza": "LyjSUKHKnh"
+    },
+    {
+      "out": "characters/enemy_bat.glb",
+      "polypizza": "hNO9XvjlKa"
+    },
+    {
+      "out": "characters/enemy_mushnub.glb",
+      "polypizza": "LWKmS30Xxl"
+    },
+    {
+      "out": "characters/enemy_giant.glb",
+      "polypizza": "BldaiPtyJa"
+    },
+    {
+      "out": "props/projectile_arrow.glb",
+      "polypizza": "Rt48KEPDGt"
+    },
+    {
+      "out": "environment/wall_stone.glb",
+      "polypizza": "CkF171SeTV"
+    },
+    {
+      "out": "environment/rock_a.glb",
+      "polypizza": "RtLRqYjfMs"
+    },
+    {
+      "out": "environment/rock_b.glb",
+      "polypizza": "4MUaQTcDdc"
+    },
+    {
+      "out": "environment/rocks_dark.glb",
+      "polypizza": "OQvi8PIZ40"
+    },
+    {
+      "out": "environment/boulder.glb",
+      "polypizza": "54jZKTAt5p"
+    },
+    {
+      "out": "environment/torch.glb",
+      "polypizza": "Gq38E7hFZw"
+    },
+    {
+      "out": "environment/crystal.glb",
+      "polypizza": "pf5lzmgr2J"
+    },
+    {
+      "out": "environment/mushroom.glb",
+      "polypizza": "db1tjMhmiA"
+    },
+    {
+      "out": "environment/tree_pine.glb",
+      "polypizza": "79gmlLnweB"
+    },
+    {
+      "out": "environment/tree_round.glb",
+      "polypizza": "2paAm1ja4w"
+    },
+    {
+      "out": "environment/tree_pine_snow.glb",
+      "polypizza": "17vQv2X5rh"
+    },
+    {
+      "out": "environment/tree_dead.glb",
+      "polypizza": "MlmK5488ou"
+    },
+    {
+      "out": "environment/tree_dead_snow.glb",
+      "polypizza": "PILl2nbDNz"
+    },
+    {
+      "out": "environment/tree_palm.glb",
+      "polypizza": "A6cKJYFsIb"
+    },
+    {
+      "out": "environment/cactus.glb",
+      "polypizza": "HsEJgRLQWX"
+    },
+    {
+      "out": "environment/bush.glb",
+      "polypizza": "ooG6CkLyE8"
+    },
+    {
+      "out": "environment/bush_flowers.glb",
+      "polypizza": "U1ymDy8tbY"
+    },
+    {
+      "out": "environment/bush_snow.glb",
+      "polypizza": "H4IEAwYl1z"
+    },
+    {
+      "out": "environment/grass.glb",
+      "polypizza": "UGTOzcO3P2"
+    },
+    {
+      "out": "environment/flowers.glb",
+      "polypizza": "NBUxHir6FJ"
+    },
+    {
+      "out": "environment/skull.glb",
+      "polypizza": "YgmRBtFlcF"
+    },
+    {
+      "out": "environment/ribcage.glb",
+      "polypizza": "A67un3x9nV"
+    }
   ],
   "textures": [
-    { "out": "textures/forest_floor",  "polyhaven": "cobblestone_floor_04" },
-    { "out": "textures/forest_ground", "polyhaven": "leafy_grass" },
-    { "out": "textures/desert_floor",  "polyhaven": "grassy_cobblestone" },
-    { "out": "textures/desert_ground", "polyhaven": "mossy_brick_floor" },
-    { "out": "textures/ice_floor",     "polyhaven": "stone_tiles_02" },
-    { "out": "textures/ice_ground",    "polyhaven": "snow_floor" },
-    { "out": "textures/lava_floor",    "polyhaven": "volcanic_rock_tiles" },
-    { "out": "textures/lava_ground",   "polyhaven": "red_sandstone_tiles" }
+    {
+      "out": "textures/forest_floor",
+      "polyhaven": "cobblestone_floor_04"
+    },
+    {
+      "out": "textures/forest_ground",
+      "polyhaven": "leafy_grass"
+    },
+    {
+      "out": "textures/desert_floor",
+      "polyhaven": "grassy_cobblestone"
+    },
+    {
+      "out": "textures/desert_ground",
+      "polyhaven": "mossy_brick_floor"
+    },
+    {
+      "out": "textures/ice_floor",
+      "polyhaven": "stone_tiles_02"
+    },
+    {
+      "out": "textures/ice_ground",
+      "polyhaven": "snow_floor"
+    },
+    {
+      "out": "textures/lava_floor",
+      "polyhaven": "volcanic_rock_tiles"
+    },
+    {
+      "out": "textures/lava_ground",
+      "polyhaven": "red_sandstone_tiles"
+    }
   ],
   "hdris": [
-    { "out": "env/sky.hdr", "polyhaven": "kloofendal_48d_partly_cloudy_puresky" }
+    {
+      "out": "env/sky.hdr",
+      "polyhaven": "kloofendal_48d_partly_cloudy_puresky"
+    }
   ],
   "soundPacks": {
-    "rpg80":    { "page": "https://opengameart.org/content/80-cc0-rpg-sfx",                 "zip": "https://opengameart.org/sites/default/files/80-CC0-RPG-SFX_0.zip" },
-    "sfx100":   { "page": "https://opengameart.org/content/100-cc0-sfx",                    "zip": "https://opengameart.org/sites/default/files/100-CC0-SFX_0.zip" },
-    "creature": { "page": "https://opengameart.org/content/80-cc0-creature-sfx",            "zip": "https://opengameart.org/sites/default/files/80-CC0-creature-SFX_0.zip" },
-    "slime":    { "page": "https://opengameart.org/content/40-cc0-water-splash-slime-sfx",  "zip": "https://opengameart.org/sites/default/files/water-splash-slime-sfx.zip" },
-    "impacts":  { "page": "https://opengameart.org/content/75-cc0-breaking-falling-hit-sfx","zip": "https://opengameart.org/sites/default/files/sfx_breaking_and_falling.zip" },
-    "rpgpack":  { "page": "https://opengameart.org/content/rpg-sound-pack",                 "zip": "https://opengameart.org/sites/default/files/rpg_sound_pack.zip" }
+    "medieval": {
+      "page": "https://opengameart.org/content/medieval-sound-effects-weapon-textures",
+      "files": [
+        "https://opengameart.org/sites/default/files/medieval_sfx_textures_1_of_2.7z",
+        "https://opengameart.org/sites/default/files/medieval_sfx_textures_2_of_2.7z"
+      ]
+    },
+    "fleshHits": {
+      "page": "https://opengameart.org/content/impact",
+      "files": [
+        "https://opengameart.org/sites/default/files/qubodupImpact.7z"
+      ]
+    },
+    "bassHits": {
+      "page": "https://opengameart.org/content/impactsgunsfx",
+      "files": [
+        "https://opengameart.org/sites/default/files/impacts.zip"
+      ]
+    },
+    "explosions": {
+      "page": "https://opengameart.org/content/explosions-4",
+      "files": [
+        "https://opengameart.org/sites/default/files/explosion2.ogg",
+        "https://opengameart.org/sites/default/files/explosion3.ogg"
+      ]
+    }
   },
   "sounds": {
-    "bow_shoot":     [["rpgpack", "battle/swing.wav"], ["rpgpack", "battle/swing2.wav"], ["rpgpack", "battle/swing3.wav"]],
-    "arrow_hit":     [["sfx100", "hit_03.ogg"], ["sfx100", "hit_04.ogg"]],
-    "arrow_crit":    [["rpg80", "blade_01.ogg"], ["rpg80", "blade_03.ogg"]],
-    "arrow_block":   [["impacts", "bfh1_wood_hit_01.ogg"], ["impacts", "bfh1_wood_hit_02.ogg"], ["impacts", "bfh1_wood_hit_03.ogg"]],
-
-    "enemy_spawn":   [["sfx100", "weird_03.ogg"]],
-    "slime_bite":    [["rpgpack", "NPC/slime/slime5.wav"], ["rpgpack", "NPC/slime/slime10.wav"]],
-    "slime_die":     [["slime", "slime_09.ogg"], ["slime", "slime_15.ogg"], ["slime", "slime_04.ogg"]],
-    "bat_attack":    [["creature", "bug_03.ogg"], ["creature", "alien_06.ogg"]],
-    "bat_die":       [["creature", "cute_04.ogg"], ["creature", "cute_05.ogg"]],
-    "shooter_spit":  [["creature", "spit_01.ogg"], ["creature", "spit_02.ogg"], ["creature", "spit_03.ogg"]],
-    "shooter_die":   [["rpg80", "creature_slime_03.ogg"], ["creature", "burble_02.ogg"]],
-    "golem_throw":   [["rpgpack", "NPC/giant/giant1.wav"], ["rpgpack", "NPC/giant/giant4.wav"]],
-    "golem_die":     [["rpgpack", "NPC/giant/giant2.wav"], ["rpgpack", "NPC/giant/giant5.wav"]],
-
-    "boss_roar":     [["rpg80", "creature_roar_03.ogg"], ["rpg80", "creature_roar_01.ogg"]],
-    "boss_slam":     [["sfx100", "slam_03.ogg"], ["sfx100", "slam_02.ogg"]],
-    "boss_cast":     [["rpgpack", "battle/magic1.wav"]],
-    "boss_charge":   [["creature", "monster_06.ogg"]],
-    "boss_impact":   [["sfx100", "explosion.ogg"]],
-    "boss_die":      [["rpg80", "creature_die_01.ogg"]],
-
-    "player_hurt":   [["creature", "hurt_04.ogg"], ["creature", "hurt_05.ogg"]],
-    "player_die":    [["creature", "grunt_01.ogg"]],
-    "gem":           [["rpg80", "item_gem_01.ogg"], ["rpg80", "item_gem_03.ogg"], ["rpg80", "item_gem_04.ogg"]],
-    "level_up":      [["rpg80", "spell_01.ogg"]],
-    "heal":          [["rpgpack", "inventory/bubble2.wav"]],
-    "room_clear":    [["sfx100", "bell_03.ogg"]],
-    "portal":        [["rpg80", "spell_02.ogg"]],
-    "ui_click":      [["rpgpack", "interface/interface1.wav"]],
-    "ui_select":     [["rpgpack", "interface/interface3.wav"]],
-    "game_over":     [["sfx100", "gong_01.ogg"]]
+    "bow_shoot": [
+      [
+        {
+          "pack": "medieval",
+          "file": "Scythian Recurve Shoot.wav",
+          "start": 0.233,
+          "dur": 0.16,
+          "filter": "equalizer=f=170:t=q:w=1:g=7,equalizer=f=3200:t=q:w=1.4:g=4,acompressor=threshold=-24dB:ratio=5:attack=0.5:release=50:makeup=6"
+        },
+        {
+          "pack": "medieval",
+          "file": "Scythian Recurve Arrow Pass.wav",
+          "start": 1.15,
+          "dur": 0.2,
+          "gain": -4,
+          "delay": 0.006,
+          "fadeIn": 0.03,
+          "filter": "highpass=f=500,lowpass=f=5500"
+        }
+      ]
+    ],
+    "arrow_hit": [
+      [
+        {
+          "pack": "fleshHits",
+          "file": "qubodupImpactStone.flac",
+          "dur": 0.08,
+          "filter": "highpass=f=150,equalizer=f=3000:t=q:w=1.5:g=3"
+        },
+        {
+          "pack": "bassHits",
+          "file": "Impact 7.wav",
+          "start": 0.071,
+          "dur": 0.08,
+          "gain": -9,
+          "filter": "highpass=f=140"
+        }
+      ]
+    ],
+    "arrow_crit": [
+      [
+        {
+          "pack": "fleshHits",
+          "file": "qubodupImpactStone.flac",
+          "dur": 0.08,
+          "filter": "highpass=f=150,equalizer=f=3000:t=q:w=1.5:g=3"
+        },
+        {
+          "pack": "bassHits",
+          "file": "Impact 7.wav",
+          "start": 0.071,
+          "dur": 0.08,
+          "gain": -9,
+          "filter": "highpass=f=140"
+        },
+        {
+          "pack": "bassHits",
+          "file": "Impact 9.wav",
+          "start": 0.068,
+          "dur": 0.18,
+          "gain": -10,
+          "filter": "highpass=f=120"
+        },
+        {
+          "pack": "fleshHits",
+          "file": "qubodupImpactMetal.flac",
+          "dur": 0.25,
+          "gain": -8,
+          "filter": "highpass=f=1500"
+        }
+      ]
+    ],
+    "boss_slam": [
+      [
+        {
+          "pack": "bassHits",
+          "file": "Impact 14.wav",
+          "start": 0.14,
+          "dur": 1.7,
+          "filter": "highpass=f=55,equalizer=f=90:t=q:w=1:g=-4"
+        },
+        {
+          "pack": "explosions",
+          "file": "explosion3.ogg",
+          "dur": 0.5,
+          "gain": 0,
+          "filter": "highpass=f=250"
+        }
+      ],
+      [
+        {
+          "pack": "bassHits",
+          "file": "Impact 12.wav",
+          "start": 0.11,
+          "dur": 1.4,
+          "filter": "highpass=f=40"
+        },
+        {
+          "pack": "explosions",
+          "file": "explosion2.ogg",
+          "dur": 0.5,
+          "gain": -5,
+          "filter": "highpass=f=250"
+        }
+      ]
+    ],
+    "boss_impact": [
+      [
+        {
+          "pack": "bassHits",
+          "file": "Impact 3.wav",
+          "start": 0.02,
+          "dur": 1.8,
+          "filter": "highpass=f=55,equalizer=f=90:t=q:w=1:g=-4"
+        },
+        {
+          "pack": "bassHits",
+          "file": "Impact Gun 4.wav",
+          "start": 0.078,
+          "dur": 1.0,
+          "gain": -3
+        },
+        {
+          "pack": "explosions",
+          "file": "explosion3.ogg",
+          "dur": 0.5,
+          "gain": -5
+        }
+      ]
+    ],
+    "hazard_blast": [
+      [
+        {
+          "pack": "explosions",
+          "file": "explosion3.ogg",
+          "dur": 0.5
+        },
+        {
+          "pack": "bassHits",
+          "file": "Impact Gun 1.wav",
+          "start": 0.115,
+          "dur": 0.6,
+          "gain": -6
+        }
+      ],
+      [
+        {
+          "pack": "explosions",
+          "file": "explosion2.ogg",
+          "dur": 0.55
+        },
+        {
+          "pack": "bassHits",
+          "file": "Impact Gun 1.wav",
+          "start": 0.115,
+          "dur": 0.6,
+          "gain": -6
+        }
+      ]
+    ],
+    "boss_cast": [
+      [
+        {
+          "pack": "bassHits",
+          "file": "Impact Rash 1.wav",
+          "start": 0.04,
+          "dur": 1.0,
+          "filter": "highpass=f=45"
+        },
+        {
+          "pack": "explosions",
+          "file": "explosion3.ogg",
+          "dur": 0.6,
+          "gain": -5,
+          "delay": 0.02,
+          "filter": "highpass=f=180,equalizer=f=900:t=q:w=1.2:g=3"
+        }
+      ],
+      [
+        {
+          "pack": "bassHits",
+          "file": "Impact Rash 2.wav",
+          "start": 0.06,
+          "dur": 1.0,
+          "filter": "highpass=f=45"
+        },
+        {
+          "pack": "explosions",
+          "file": "explosion2.ogg",
+          "dur": 0.55,
+          "gain": -5,
+          "delay": 0.02,
+          "filter": "highpass=f=180,equalizer=f=900:t=q:w=1.2:g=3"
+        }
+      ]
+    ],
+    "boss_swing": [
+      [
+        {
+          "pack": "medieval",
+          "file": "Axe Swing.wav",
+          "start": 1.59,
+          "dur": 0.4,
+          "filter": "asetrate=27342,aresample=44100,lowpass=f=3500,highpass=f=55,equalizer=f=90:t=q:w=1:g=-4"
+        },
+        {
+          "pack": "bassHits",
+          "file": "Impact Gun 1.wav",
+          "start": 0.115,
+          "dur": 0.5,
+          "gain": -7,
+          "delay": 0.12,
+          "filter": "highpass=f=55,equalizer=f=90:t=q:w=1:g=-5"
+        },
+        {
+          "pack": "medieval",
+          "file": "Scythian Recurve Heavy Arrow Pass.wav",
+          "start": 0.55,
+          "dur": 0.42,
+          "gain": -2,
+          "filter": "asetrate=30870,aresample=44100,highpass=f=150,lowpass=f=5000"
+        }
+      ],
+      [
+        {
+          "pack": "medieval",
+          "file": "Axe Swing.wav",
+          "start": 5.95,
+          "dur": 0.4,
+          "filter": "asetrate=26460,aresample=44100,lowpass=f=3500,highpass=f=55,equalizer=f=90:t=q:w=1:g=-4"
+        },
+        {
+          "pack": "bassHits",
+          "file": "Impact Gun 4.wav",
+          "start": 0.078,
+          "dur": 0.5,
+          "gain": -7,
+          "delay": 0.12,
+          "filter": "highpass=f=55,equalizer=f=90:t=q:w=1:g=-5"
+        },
+        {
+          "pack": "medieval",
+          "file": "Scythian Recurve Heavy Arrow Pass.wav",
+          "start": 2.12,
+          "dur": 0.42,
+          "gain": -2,
+          "filter": "asetrate=30870,aresample=44100,highpass=f=150,lowpass=f=5000"
+        }
+      ]
+    ]
   }
 }

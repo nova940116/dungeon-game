@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { assets } from '../AssetLibrary';
 import { mesh, shared } from '../ModelKit';
-import { GEOMETRY, MATERIAL } from '../sharedResources';
+import { MATERIAL } from '../sharedResources';
 import { vfxTexture } from '../vfxTextures';
 
 const haloMaterials = new Map<number, THREE.SpriteMaterial>();
@@ -18,8 +18,8 @@ function halo(color: number, intensity: number): THREE.SpriteMaterial {
   return m;
 }
 
-/** Arrow pointing along +Z (GLB model). */
-export function createArrowMesh(): THREE.Group {
+/** Arrow pointing along +Z (GLB model). `glow` tints the tip halo (spirit arrows are cyan). */
+export function createArrowMesh(glow = 0xffd890): THREE.Group {
   const { root } = assets.instantiate('arrow');
   // The source arrow is modeled along its longest axis; orient it to +Z.
   const size = assets.sizeOf('arrow');
@@ -29,29 +29,11 @@ export function createArrowMesh(): THREE.Group {
   root.traverse((o) => {
     o.castShadow = false;
   });
-  const glow = new THREE.Sprite(halo(0xffd890, 1.4));
-  glow.scale.setScalar(0.45);
-  glow.position.z = 0.35;
-  root.add(glow);
+  const tip = new THREE.Sprite(halo(glow, 1.4));
+  tip.scale.setScalar(0.45);
+  tip.position.z = 0.35;
+  root.add(tip);
   return root;
-}
-
-export function createBulletMesh(heavy: boolean, color: number): THREE.Group {
-  const g = new THREE.Group();
-  const core = mesh(GEOMETRY.bullet, heavy ? MATERIAL.bulletHeavy : MATERIAL.bullet, 0, 0, 0, false);
-  const glow = new THREE.Sprite(halo(color, 1.6));
-  glow.scale.setScalar(1.1);
-  g.add(core, glow);
-  if (heavy) g.scale.setScalar(1.5);
-  return g;
-}
-
-export function createOrbMesh(): THREE.Group {
-  const g = new THREE.Group();
-  const glow = new THREE.Sprite(halo(0x5dffa0, 1.3));
-  glow.scale.setScalar(0.7);
-  g.add(mesh(GEOMETRY.orb, MATERIAL.orb, 0, 0, 0, false), glow);
-  return g;
 }
 
 /** Red ground strip showing where a charge attack will go. Extends along +Z from its origin. */

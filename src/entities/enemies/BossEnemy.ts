@@ -78,6 +78,7 @@ export abstract class BossEnemy extends Enemy {
     this.stepTimer = interval;
     for (let i = 0; i < 3; i++) world.effects.dust(this.x + rand(-0.6, 0.6) * this.radius, this.z + rand(-0.6, 0.6) * this.radius);
     world.events.emit('camera:shake', { intensity: shake });
+    world.events.emit('enemy:attack', { enemy: this, kind: 'stomp' });
   }
 
   protected abstract onPhase(world: World, phase: number): void;

@@ -23,11 +23,11 @@ export class Shooter extends Enemy {
       this.model.playOnce('attack', { timeScale: 1.3 });
     }
     if (this.timer <= 0) {
-      world.spawnBullet(this.x, this.z, this.face, 6.5);
+      world.spawnBullet(this.x, this.z, this.face, 6.5, 'acid');
       world.events.emit('enemy:attack', { enemy: this, kind: 'spit' });
       if (world.roomNo >= SPREAD_FROM_ROOM) {
-        world.spawnBullet(this.x, this.z, this.face + 0.25, 6.5);
-        world.spawnBullet(this.x, this.z, this.face - 0.25, 6.5);
+        world.spawnBullet(this.x, this.z, this.face + 0.25, 6.5, 'acid');
+        world.spawnBullet(this.x, this.z, this.face - 0.25, 6.5, 'acid');
       }
       this.timer = rand(2.0, 2.6);
       this.wound = false;

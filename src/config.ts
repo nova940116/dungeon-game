@@ -37,7 +37,6 @@ export const BALANCE = {
   bossClearHealRatio: 0.3,
   xpBase: 18,
   xpPerLevel: 14,
-  orbMagnetRadius: 2.6,
 } as const;
 
 export const ENGINE = {

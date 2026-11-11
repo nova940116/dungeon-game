@@ -1,4 +1,5 @@
 import { BALANCE } from '../config';
+import { bossTypeForRoom, ENEMY_DEFS } from './enemies';
 import type { ModelKey, ThemeId } from '../assets/AssetManifest';
 import type { AmbientKind } from '../world/AmbientParticles';
 
@@ -83,19 +84,25 @@ const mixHex = (a: number, b: number, t: number): number => {
   return ch(16) | ch(8) | ch(0);
 };
 
-/** Sky + lighting for a room. Boss arenas are dimmed so the boss's own glow dominates. */
+/**
+ * Sky + lighting for a room. Boss arenas are dimmed so the boss's own glow dominates; stage-boss
+ * arenas are also washed in the boss's colour (hellfire red for the demon, grave green for the
+ * necromancer).
+ */
 export function moodForRoom(roomNo: number): { sky: number; light: ThemeLighting } {
   const { sky, light } = themeForRoom(roomNo);
+  const type = bossTypeForRoom(roomNo);
+  const tint = (type && ENEMY_DEFS[type].bossInfo?.color) || 0xff3a1a;
   if (isStageBossRoom(roomNo)) {
     return {
-      sky: mixHex(sky, 0x140204, 0.8),
+      sky: mixHex(sky, mixHex(tint, 0x000000, 0.92), 0.85),
       light: {
         ...light,
-        hemiSky: mixHex(light.hemiSky, 0xff6a50, 0.55),
-        hemiGround: mixHex(light.hemiGround, 0x1a0204, 0.7),
-        hemiIntensity: light.hemiIntensity * 0.42,
-        sunColor: mixHex(light.sunColor, 0xff5a3a, 0.6),
-        sunIntensity: light.sunIntensity * 0.5,
+        hemiSky: mixHex(light.hemiSky, tint, 0.55),
+        hemiGround: mixHex(light.hemiGround, mixHex(tint, 0x000000, 0.9), 0.7),
+        hemiIntensity: light.hemiIntensity * 0.55,
+        sunColor: mixHex(light.sunColor, tint, 0.6),
+        sunIntensity: light.sunIntensity * 0.62,
         envIntensity: light.envIntensity * 0.35,
         exposure: light.exposure * 0.9,
       },

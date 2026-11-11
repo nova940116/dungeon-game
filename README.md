@@ -13,7 +13,8 @@ npm run preview    # 빌드 결과 미리보기
 npm test           # 유닛 테스트 (Vitest)
 npm run assets     # 외부 에셋 다운로드 + 최적화 → public/assets (결과물은 이미 포함됨)
 npm run assets:archer  # 블렌더로 궁수 캐릭터(활 리그 + 활 애니메이션) 빌드 — assets 다음에 실행
-npm run assets:bosses  # 블렌더로 보스 2종(모델·리그·애니메이션 전부 코드로 직접 제작) 빌드 — 원본 에셋 불필요
+npm run assets:bosses  # 블렌더로 보스 4종 + 소환수 4종(모델·리그·애니메이션 전부 코드로 직접 제작) 빌드 — 원본 에셋 불필요
+npm run assets:sounds  # 효과음만 다시 빌드 (CC0 녹음을 잘라·겹쳐 MP3로)
 ```
 
 ## 에셋
@@ -23,20 +24,20 @@ npm run assets:bosses  # 블렌더로 보스 2종(모델·리그·애니메이�
 | 종류 | 출처 | 내용 |
 |---|---|---|
 | 몬스터 (애니메이션 포함) | [Quaternius](https://quaternius.com) via poly.pizza | 슬라임, 박쥐, 버섯, 거인 |
-| 보스 2종 (직접 제작) | 블렌더 스크립트(`scripts/blender/boss_*.py`)로 메시·뼈대·애니메이션을 처음부터 생성 | 고대 골렘(중간 보스), 심연의 마왕(스테이지 보스) |
+| 보스 4종 + 소환수 4종 (직접 제작) | 블렌더 스크립트(`scripts/blender/boss_*.py`, `spider.py`, `undead.py`)로 메시·뼈대·애니메이션을 처음부터 생성 | 고대 골렘, 심연의 마왕, 서리 거미 여왕, 망자의 군주 / 새끼 거미, 해골 전사, 망령, 죽음의 기사 |
 | 궁수 플레이어 | Quaternius의 King(판금 갑옷 몸) + Adventurer(수염 머리) + 활·화살을 블렌더 스크립트로 합성 | 근육질 영웅 체형 + 활 리그 + 활 쏘기 애니메이션 4종 (직접 제작) |
 | 소품·환경 | Quaternius via poly.pizza | 활, 화살, 돌벽, 바위, 나무(소나무/눈/야자/고목), 선인장, 덤불, 크리스탈, 횃불, 해골 등 |
 | 바닥 PBR 텍스처 | [Poly Haven](https://polyhaven.com) | 테마별 바닥/지면 (diffuse + normal) |
 | 환경광 HDRI | Poly Haven | 하늘 HDRI (조명 반사용) |
 | 파티클 텍스처 | 코드로 생성 | glow / star / ring / smoke / portal (`src/assets/vfxTextures.ts`) |
-| 효과음 (29종 · 50파일) | [OpenGameArt](https://opengameart.org) — rubberduck의 CC0 SFX 팩 5종, artisticdude의 RPG Sound Pack | 활 시위, 화살 명중/치명타/막힘, 몬스터별 공격·사망, 보스 포효·내려찍기·돌진, 보석 획득, 레벨업, 방 클리어, UI |
+| 효과음 (8종 · 12파일) | [OpenGameArt](https://opengameart.org) CC0 녹음 — Medieval Weapon Textures(활·휘두름), qubodup Impact(타격), Eldritch Grim Impacts(저음 충격), explosions 4 | 활 발사, 화살 명중/치명타, 보스 스킬(내려찍기·충돌·시전·돌진·장판 폭발) — 보스 스킬은 깊은 저음 충격 + 중역 폭발음을 겹쳐 작은 스피커에서도 묵직하게 들리도록 구성. 그 외 효과음은 없음 |
 
 **에셋 파이프라인** (`scripts/fetch-assets.mjs`)
 1. `scripts/asset-sources.json`에 적힌 모델/텍스처를 다운로드 (`.asset-cache/`에 캐시)
 2. 라이선스가 CC0인지 검증 — 아니면 빌드 실패
 3. 모델은 `gltf-transform optimize`로 텍스처 512px WebP 변환·중복 제거 (원본 ~25MB → 6MB)
 4. 텍스처는 512px WebP로 리사이즈
-5. 효과음은 zip에서 추출 → 앞부분 무음 제거 → 피크 -1dB 정규화 → 모노 MP3(96kbps) 변환 (ffmpeg-static, 전체 ~470KB)
+5. 효과음은 팩(zip/7z/파일)에서 꺼내 구간을 잘라 여러 녹음을 겹친 뒤 → 피크 -1dB 정규화 → 모노 MP3(128kbps) (ffmpeg-static)
 6. `CREDITS.md` 재생성
 
 새 에셋 추가: `asset-sources.json`에 한 줄 추가 → `npm run assets` → `src/assets/AssetManifest.ts`에 키 등록.
@@ -73,18 +74,35 @@ npm run assets:bosses  # 블렌더로 보스 2종(모델·리그·애니메이�
   - 랜덤 피치 + 직전과 다른 변형 선택 → 반복음이 기계적으로 들리지 않음
   - 좌우 패닝(아레나 x 위치), 마스터 컴프레서로 클리핑 방지
 - **AudioSystem** (`src/systems/AudioSystem.ts`): 게임 이벤트 → 효과음 매핑. 게임 로직은 이벤트만 발행하고 오디오를 직접 호출하지 않음
-  - 보석을 연달아 먹으면 음이 점점 올라감 (콤보 피드백)
 - 음소거: HUD 🔊 버튼 또는 `M` 키 (설정 저장됨)
 - 볼륨/피치/쿨다운 튜닝: `src/audio/SoundManifest.ts`
+- 재생되는 소리는 활 발사, 화살 타격(일반/치명타), 보스 스킬뿐 — 일반 몬스터·UI·레벨업 등은 무음
+- 소리 교체: `scripts/asset-sources.json`의 `sounds`에서 녹음 파일·구간(`start`/`dur`)·겹칠 레이어(`gain`/`delay`)를 바꾸고 `npm run assets:sounds`
 
 ## 조작
 
 - 이동: `WASD` / 방향키, 모바일은 화면 드래그(가상 조이스틱)
 - 멈춰 서면 가장 가까운 적에게 자동 사격
 - 일시정지: `Esc` / `P` 또는 HUD ⏸ 버튼 (탭을 벗어나거나 창이 포커스를 잃으면 자동 일시정지). 일시정지 화면에서 계속하기 · 처음부터 다시 · 메인 메뉴 (되돌릴 수 없는 버튼은 두 번 눌러 확인)
-- 방을 정리하면 위쪽 문이 열림 · 5·15·25…번째 방은 중간 보스(고대 골렘), 10·20·30…번째 방은 스테이지 보스(심연의 마왕)
+- 방을 정리하면 위쪽 문이 열림 · 5번째 방마다 보스, 네 보스가 차례로 반복 (25라운드부터 다시 골렘)
+  - 5라운드 **고대 골렘** (중간 보스): 바위 연사 · 내려찍기 · 지진 장판
+  - 10라운드 **심연의 마왕** (스테이지 보스): 화염 탄막 · 돌진 · 메테오 · 암흑 나선
+  - 15라운드 **서리 거미 여왕** (중간 보스): 플레이어 위로 도약해 내려찍고 고드름 폭발 · 맞으면 느려지는 거미줄 탄 · 새끼 거미 소환
+  - 20라운드 **망자의 군주** (스테이지 보스, 네크로맨서): 거리를 벌리고 순간이동 · 영혼탄 · 뼈 분출 장판 · 해골 전사/망령 소환, 체력 66%·33%에서 **죽음의 기사** 소환. 소환수가 3마리 이상 살아 있으면 **뼈 보호막**(받는 피해 -75%) — 소환수부터 정리해야 함
 - 보스는 등장 연출·전용 체력바·체력 구간별 페이즈가 있고, 바닥에 예고되는 장판 공격을 사용
-- 화면 왼쪽 위: 현재 능력치(공격력 · 초당 공격 · 치명타 · 한 번에 쏘는 화살 수)와 보유 스킬(●○ 단계, 최대 단계는 금색 테두리)
+- 화면 왼쪽 위: 현재 능력치(공격력 · 초당 공격 · 치명타 · 한 번에 쏘는 화살 수), 시너지 진행도(🔥 2/3 …), 보유 증강. 보호막은 체력바(화면 위·플레이어 머리 위) 초록색 뒤에 하늘색 구간으로 따로 표시 (많아지면 아이콘 격자로 접힘)
+
+## 증강 (레벨 업 선택지)
+
+- 레벨 업마다 증강 3장 중 하나를 고름 — **70종**, 등급 3단계: 일반 / 희귀 / 전설
+  - 레벨 업에서는 일반·희귀만 나옴 (레벨이 오를수록 희귀 확률 증가)
+  - **전설은 스테이지 보스(10·20·30…라운드)를 잡았을 때의 보상에서만** 고를 수 있음
+- **다시 뽑기**: 카드마다 한 장씩 교체 가능 (런 시작 2회, 보스 처치마다 +1, `행운의 부적`으로 +3)
+- **보스 보상**: 중간 보스를 잡으면 희귀 3장, 스테이지 보스를 잡으면 전설 3장 중 하나를 추가로 고름
+- **시너지**: 같은 계열의 서로 다른 증강을 모으면 보너스 발동 (한 런에 한 번)
+  - 🔥화염 3 · ❄️냉기 3 · ⚡번개 3 · 🧪맹독 3 · 🎯사냥꾼 3 · 🛡️수호 3 · 💨질풍 3 · 🏹화살비 3 · 🗡️칼날 2
+  - 이미 시작한 시너지 계열의 증강이 조금 더 잘 나옴
+- 효과 종류: 화상·독·둔화·빙결·표식 같은 상태 이상, 폭발·분열·도탄·유도·연쇄 번개, 회전 칼날·충격파·낙뢰·정령 궁수 같은 자동 공격, 처치 시 폭발/화살, 회피·방어·보호막·가시·흡혈·부활, 이동 중 사격, 시간 왜곡, 주사위(무작위 증강), 유리 대포 같은 트레이드오프
 
 ## 프로젝트 구조
 
@@ -112,14 +130,14 @@ src/
 │  ├─ Enemy.ts              # 적 베이스 클래스 (스폰/피격/접촉 데미지)
 │  ├─ enemies/              # Slime, Bat, Shooter, Golem, MidBoss, Boss(+BossEnemy/BossAura) + 팩토리
 │  ├─ projectiles/          # Arrow, EnemyBullet
-│  └─ XpOrb.ts
 ├─ systems/                 # 프레임마다 World를 갱신하는 로직
 │  ├─ AudioSystem.ts        #   게임 이벤트 → 효과음
 │  ├─ WeaponSystem.ts       #   멈추면 자동 사격, 타겟팅, 화살 패턴
 │  ├─ CombatSystem.ts       #   투사체 이동·피격·반사·관통·치명타
 │  ├─ EnemySystem.ts        #   적 AI 실행 + 겹침 방지
-│  ├─ PickupSystem.ts       #   경험치 구슬 자석/획득
-│  ├─ ProgressionSystem.ts  #   경험치·레벨·스킬 드래프트
+│  ├─ ProgressionSystem.ts  #   경험치·레벨·증강 드래프트(등급·리롤·보스 보상·시너지)
+│  ├─ AugmentSystem.ts      #   회전 칼날·충격파·낙뢰·정령 궁수·재생
+│  ├─ HitEffects.ts         #   적중 효과(상태 이상·폭발·연쇄 번개·분열) + 상태 이상 틱
 │  └─ EffectsSystem.ts      #   파티클
 ├─ assets/                  # 에셋 로딩·인스턴싱
 │  ├─ AssetManifest.ts      #   모든 모델/텍스처 경로, 크기 정규화, 애니메이션 클립 매핑
@@ -131,7 +149,7 @@ src/
 │  └─ models/               #   Environment(벽/바위/횃불/포털), Projectile, HealthBar
 ├─ data/                    # 데이터 테이블 (코드 수정 없이 콘텐츠 추가)
 │  ├─ enemies.ts            #   적 스탯, 방별 등장 테이블
-│  ├─ skills.ts             #   스킬 정의
+│  ├─ augments.ts           #   증강 70종 + 시너지 세트 정의
 │  └─ themes.ts             #   챕터별 테마
 ├─ ui/                      # DOM UI
 │  ├─ Hud.ts, Screens.ts, DamageNumbers.ts, dom.ts
@@ -145,15 +163,15 @@ tests/                      # Vitest 유닛 테스트 (충돌, 방 생성, 성�
 - **레이어 의존 방향**: `engine` ← `game` ← `systems`/`entities` ← `data`/`assets`. 엔진은 게임을 모릅니다.
 - **World + Systems**: 엔티티는 상태와 자기 AI만 갖고, 시스템이 World를 순회하며 상호작용(피격, 획득 등)을 처리합니다.
 - **이벤트 기반 피드백**: 전투 로직은 `enemy:damaged`, `player:damaged` 같은 이벤트만 발행하고, 데미지 숫자·화면 흔들림·HUD는 `Game`에서 구독해 처리합니다. 사운드를 붙일 때도 이벤트 구독만 추가하면 됩니다.
-- **데이터 주도**: 새 스킬은 `data/skills.ts`에 한 줄, 새 적은 `data/enemies.ts` + `entities/enemies/`에 클래스 하나 + 팩토리 등록이면 끝입니다.
+- **데이터 주도**: 새 증강은 `data/augments.ts`에 한 줄 (증강은 `PlayerStats` 숫자만 바꾸고, 시스템이 그 숫자를 읽음), 새 적은 `data/enemies.ts` + `entities/enemies/`에 클래스 하나 + 팩토리 등록이면 끝입니다.
 - **리소스 관리**: 화살·총알처럼 많이 생기는 객체는 공유 지오메트리/머티리얼을 쓰고, 방을 나갈 때 `disposeObject`로 GPU 리소스를 해제합니다.
 
 ## 콘텐츠 추가 예시
 
-**스킬 추가** — `src/data/skills.ts`
+**증강 추가** — `src/data/augments.ts`의 `AUGMENTS`에
 ```ts
-{ id: 'myskill', icon: '🔥', name: '새 스킬', description: '설명', maxStacks: 1, apply: (p) => { p.stats.damage *= 1.5; } },
+gold({ id: 'myAug', icon: '🔥', name: '새 증강', description: '설명', tags: ['fire'], max: 2, apply: stat((s) => void (s.burnDamage += 0.2)) }),
 ```
-(`SkillId` 유니온 타입에도 id 추가)
+(`silver` / `gold` / `prism`이 등급, `tags`가 시너지 계열. 새 효과가 필요하면 `PlayerStats`에 숫자를 추가하고 그 숫자를 읽는 시스템을 구현)
 
 **적 추가** — `scripts/asset-sources.json`에 모델 추가 후 `npm run assets` → `AssetManifest.ts`에 크기·클립 매핑 등록 → `data/enemies.ts`에 스탯 정의 → `entities/enemies/NewEnemy.ts`에서 `Enemy`를 상속해 `think()` 구현 → `entities/enemies/index.ts` 레지스트리에 등록.

@@ -20,7 +20,7 @@ export class Golem extends Enemy {
 
     if (winding && !this.model.isPlayingOneShot) this.model.playOnce('attack', { timeScale: 1.4 });
     if (this.timer <= 0) {
-      for (let i = -2; i <= 2; i++) world.spawnBullet(this.x, this.z, this.face + i * 0.22, 5, true);
+      for (let i = -2; i <= 2; i++) world.spawnBullet(this.x, this.z, this.face + i * 0.22, 5, 'rock', true);
       world.events.emit('enemy:attack', { enemy: this, kind: 'throw' });
       this.timer = 3;
     }

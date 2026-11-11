@@ -16,6 +16,24 @@ export interface Difficulty {
 
 const SINK_TIME = 0.5;
 
+/** Status effects applied by augments. Timers count down in seconds; StatusSystem ticks the damage. */
+export interface EnemyStatus {
+  burnDps: number;
+  burnTime: number;
+  poisonStacks: number;
+  poisonTime: number;
+  slow: number;
+  slowTime: number;
+  freezeTime: number;
+  mark: number;
+  markTime: number;
+}
+
+const newStatus = (): EnemyStatus => ({ burnDps: 0, burnTime: 0, poisonStacks: 0, poisonTime: 0, slow: 0, slowTime: 0, freezeTime: 0, mark: 0, markTime: 0 });
+
+/** Tints for status effects (emissive), strongest first. */
+const STATUS_TINT = { frozen: 0x2a6fb0, burn: 0x7a2a00, poison: 0x2a5a10, chilled: 0x163a66 } as const;
+
 /**
  * Base class for all enemies. Subclasses only implement `think` (their AI);
  * spawning, contact damage, hit reactions, death animation and visuals live here.
@@ -36,6 +54,9 @@ export abstract class Enemy {
   hp: number;
   /** Logically dead (no collisions / targeting). Still visible while the death animation plays. */
   dead = false;
+  readonly status: EnemyStatus = newStatus();
+  /** Can't touch or be touched by the player (e.g. mid-leap). */
+  protected intangible = false;
 
   protected t = rand(0, 2);
   protected timer = rand(0.8, 2);
@@ -61,8 +82,8 @@ export abstract class Enemy {
     this.bar = new HealthBar(Math.max(0.9, this.radius * 1.6), this.def.boss ? 0xff3b3b : 0xf87171);
     this.bar.root.visible = !this.def.boss; // bosses use the big HUD bar instead
     this.model = new AnimatedModel(modelKey);
-    this.root.position.set(x, this.def.hoverY, z);
-    this.root.scale.setScalar(0.01);
+    this.root.position.set(x, this.def.hoverY - (this.def.rise ? this.def.barHeight : 0), z);
+    this.root.scale.setScalar(this.def.rise ? 1 : 0.01);
     this.face = rand(-0.5, 0.5);
   }
 
@@ -72,6 +93,27 @@ export abstract class Enemy {
 
   get isBoss(): boolean {
     return this.def.boss;
+  }
+
+  /** Multiplies all damage taken (bosses shield themselves with this). */
+  get damageTakenMul(): number {
+    return 1;
+  }
+
+  get frozen(): boolean {
+    return this.status.freezeTime > 0;
+  }
+
+  get chilled(): boolean {
+    return this.status.slowTime > 0 || this.frozen;
+  }
+
+  /** How fast this enemy acts: slows and freezes scale its AI clock (bosses never fully freeze). */
+  timeScale(globalSlow: number): number {
+    let k = 1 - globalSlow;
+    if (this.frozen) k *= this.isBoss ? 0.45 : 0;
+    else if (this.status.slowTime > 0) k *= 1 - this.status.slow * (this.isBoss ? 0.5 : 1);
+    return k;
   }
 
   /** Still materializing: can be hit but doesn't act yet. */
@@ -100,13 +142,26 @@ export abstract class Enemy {
     if (this.spawnTimer > 0) {
       this.spawnTimer -= dt;
       const k = clamp(1 - this.spawnTimer / this.spawnTime, 0.01, 1);
-      this.root.scale.setScalar(1 - (1 - k) * (1 - k)); // ease-out
-      if (this.spawnTimer <= 0) this.onSpawned(world);
+      const ease = 1 - (1 - k) * (1 - k);
+      if (this.def.rise) {
+        // Claw up out of the ground.
+        this.root.scale.setScalar(1);
+        this.root.position.y = this.def.hoverY - this.def.barHeight * (1 - ease);
+        if (Math.random() < 0.5) world.effects.dust(this.x + rand(-0.4, 0.4), this.z + rand(-0.4, 0.4), 0x5a5048);
+      } else {
+        this.root.scale.setScalar(ease);
+      }
+      if (this.spawnTimer <= 0) {
+        this.root.position.y = this.def.hoverY;
+        this.onSpawned(world);
+      }
       return;
     }
-    this.think(dt, world);
+    const scaled = dt * this.timeScale(world.player.stats.enemySlow);
+    if (scaled > 0) this.think(scaled, world);
+    this.model.timeScale = scaled / Math.max(dt, 1e-6);
     const p = world.player;
-    if (p.alive && distance(this.x, this.z, p.x, p.z) < this.radius + p.radius - 0.05) world.damagePlayer(this.contactDamage);
+    if (p.alive && !this.frozen && !this.intangible && distance(this.x, this.z, p.x, p.z) < this.radius + p.radius - 0.05) world.damagePlayer(this.contactDamage, this);
   }
 
   /** Visual tick: animation, transform, flash, health bar, death sink. */
@@ -122,21 +177,31 @@ export abstract class Enemy {
     this.root.position.z = this.z;
     this.root.rotation.y = dampAngle(this.root.rotation.y, this.face, 10, dt);
     this.flashTimer -= dt;
-    this.model.setFlash(this.flashTimer > 0 ? 0x999999 : null);
+    this.model.setFlash(this.flashTimer > 0 ? 0x999999 : this.statusTint());
     this.bar.setRatio(this.hp / this.maxHp);
     this.bar.place(this.x, this.def.hoverY + this.def.barHeight, this.z, cameraRotation);
   }
 
-  /** Returns true if this hit killed the enemy. */
-  applyDamage(amount: number): boolean {
+  private statusTint(): number | null {
+    const s = this.status;
+    if (s.freezeTime > 0) return STATUS_TINT.frozen;
+    if (s.burnTime > 0 && Math.sin(this.t * 14) > 0) return STATUS_TINT.burn;
+    if (s.poisonTime > 0 && Math.sin(this.t * 9) > 0.3) return STATUS_TINT.poison;
+    if (s.slowTime > 0) return STATUS_TINT.chilled;
+    return null;
+  }
+
+  /** Returns true if this hit killed the enemy. `flash` = white hit flash (bow hits only, or it never stops). */
+  applyDamage(amount: number, flash = true): boolean {
     this.hp -= amount;
-    this.flashTimer = 0.1;
+    if (flash) this.flashTimer = 0.1;
     if (this.hp > 0 && !this.isBoss && !this.model.isPlayingOneShot) this.model.playOnce('hit', { timeScale: 1.8 });
     return this.hp <= 0;
   }
 
   die(): void {
     this.dead = true;
+    this.model.timeScale = 1;
     this.bar.root.visible = false;
     this.deathTimer = this.isBoss ? 2.4 : 1.3;
     this.model.playOnce('death', { hold: true, fade: 0.05 });

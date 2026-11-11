@@ -5,16 +5,18 @@ import { CameraRig } from '../engine/CameraRig';
 import { Engine } from '../engine/Engine';
 import { EventBus } from '../engine/EventBus';
 import { Input } from '../engine/Input';
+import { SETS, TIERS } from '../data/augments';
 import { moodForRoom } from '../data/themes';
 import type { BossEnemy } from '../entities/enemies/BossEnemy';
 import { Player } from '../entities/Player';
 import { AudioSystem } from '../systems/AudioSystem';
+import { AugmentSystem } from '../systems/AugmentSystem';
 import { CombatSystem } from '../systems/CombatSystem';
 import { EffectsSystem } from '../systems/EffectsSystem';
 import { EnemySystem } from '../systems/EnemySystem';
 import { HazardSystem } from '../systems/HazardSystem';
-import { PickupSystem } from '../systems/PickupSystem';
-import { ProgressionSystem, type SkillOffer } from '../systems/ProgressionSystem';
+import { StatusSystem } from '../systems/HitEffects';
+import { ProgressionSystem, type AugmentOffer } from '../systems/ProgressionSystem';
 import { WeaponSystem } from '../systems/WeaponSystem';
 import { DamageNumbers } from '../ui/DamageNumbers';
 import { Hud } from '../ui/Hud';
@@ -41,14 +43,14 @@ export class Game {
   private readonly events = new EventBus<GameEvents>();
   private readonly effects: EffectsSystem;
   private readonly audio = new AudioManager();
-  private readonly audioSystem: AudioSystem;
 
   private readonly progression = new ProgressionSystem(this.events);
   private readonly weapons = new WeaponSystem();
   private readonly enemySystem = new EnemySystem();
   private readonly combat = new CombatSystem();
   private readonly hazards = new HazardSystem();
-  private readonly pickups = new PickupSystem();
+  private readonly statuses = new StatusSystem();
+  private readonly augments: AugmentSystem;
 
   private readonly hud = new Hud();
   private readonly screens = new Screens();
@@ -68,8 +70,8 @@ export class Game {
     this.input = new Input(this.engine.canvas);
     this.cameraRig = new CameraRig(this.engine.camera, this.engine.fog);
     this.effects = new EffectsSystem(this.engine.scene);
-    this.audioSystem = new AudioSystem(this.audio, this.events);
-    this.screens.setSoundHook((kind) => this.audio.play(kind === 'select' ? 'ui_select' : 'ui_click'));
+    this.augments = new AugmentSystem(this.engine.scene);
+    new AudioSystem(this.audio, this.events); // subscribes to game events; no per-frame work
     this.hud.bindSoundToggle(this.audio.isMuted, () => this.audio.toggleMute());
     this.hud.bindPause(() => this.pause());
     this.bindPauseTriggers();
@@ -109,22 +111,23 @@ export class Game {
   private update(dt: number, elapsed: number): void {
     this.hud.setPauseAvailable(this.state === 'playing');
     if (this.state === 'paused') return; // world frozen; the engine keeps rendering the last pose
-    if (this.state === 'playing') this.tickGameplay(dt, elapsed);
+    if (this.state === 'playing') this.tickGameplay(dt);
 
     const cameraRotation = this.engine.camera.quaternion;
     this.player.update(dt, cameraRotation);
     this.enemySystem.syncVisuals(dt, this.world, cameraRotation);
+    this.augments.updateVisuals(dt, this.world);
     if (this.state !== 'playing') this.world.collectGarbage();
     this.effects.update(dt);
     this.world.room.update(dt, elapsed);
     this.cameraRig.update(dt, this.player.z);
     this.damageNumbers.update(dt, this.engine.camera);
     if (this.boss) this.hud.setBossHealth(this.boss.hp / this.boss.maxHp);
+    this.refreshHealth(); // shields and regen change HP outside of events
     this.hud.update(dt);
-    this.audioSystem.update(dt);
   }
 
-  private tickGameplay(dt: number, elapsed: number): void {
+  private tickGameplay(dt: number): void {
     const { world, player } = this;
     const moving = player.move(dt, this.input.moveVector, world.room);
     if (world.room.hasExited(player)) {
@@ -137,7 +140,8 @@ export class Game {
     this.enemySystem.update(dt, world);
     this.combat.update(dt, world);
     this.hazards.update(dt, world);
-    this.pickups.update(dt, elapsed, world, this.progression);
+    this.statuses.update(dt, world);
+    this.augments.update(dt, world);
     world.collectGarbage();
 
     if (this.state !== 'playing') return; // player died this frame
@@ -199,6 +203,7 @@ export class Game {
     this.effects.clear();
     this.player.reset();
     this.progression.reset();
+    this.augments.reset();
     this.refreshBuild();
     this.refreshHealth();
     this.loadRoom(1, false);
@@ -211,6 +216,7 @@ export class Game {
     this.effects.clear();
     this.player.reset();
     this.progression.reset();
+    this.augments.reset();
     this.refreshBuild();
     this.loadRoom(1, true);
     this.refreshHealth();
@@ -233,6 +239,8 @@ export class Game {
     this.hud.setRoom(roomNo);
 
     if (!spawnWave) return;
+    player.shield = Math.max(player.shield, player.stats.shieldPerRoom);
+    this.refreshHealth();
     this.events.emit('room:entered', { roomNo, isBoss: room.isBoss });
     for (const spawn of generateWave(roomNo, room.isBoss, room.obstacles)) world.spawnEnemy(spawn.type, spawn.x, spawn.z);
     const firstOfChapter = roomNo % BALANCE.bossEvery === 1;
@@ -255,7 +263,14 @@ export class Game {
     room.openDoor();
     this.events.emit('room:cleared', { roomNo: room.roomNo, isBoss: room.isBoss });
     this.hud.toast('방 클리어! ↑ 위로 이동');
-    if (room.isBoss) this.world.healPlayer(this.player.maxHp * BALANCE.bossClearHealRatio);
+    const heal = (room.isBoss ? BALANCE.bossClearHealRatio : 0) + this.player.stats.roomClearHeal;
+    if (heal > 0) this.world.healPlayer(this.player.maxHp * heal);
+    if (room.isBoss) {
+      // Boss reward: an extra draft of rarer augments (+1 reroll).
+      const stage = room.roomNo % BALANCE.stageBossEvery === 0;
+      this.progression.grantReward(stage ? 'prism' : 'gold');
+      this.hud.toast(stage ? '💎 전설 증강 보상!' : '✨ 희귀 증강 보상!', 2);
+    }
   }
 
   private beginBossFight(boss: Enemy): void {
@@ -274,14 +289,29 @@ export class Game {
   private openSkillPick(): void {
     this.state = 'skillPick';
     this.input.reset();
-    this.screens.showSkillPick(this.progression.rollOffers(this.player), (offer) => this.chooseSkill(offer));
+    const p = this.progression;
+    const reward = p.nextPick?.reward ? p.nextPick.minTier : null;
+    this.screens.showAugmentPick({
+      title: reward ? (reward === 'prism' ? '💎 보스 보상 — 전설' : '✨ 보스 보상 — 희귀') : '레벨 업! ✨',
+      offers: p.rollOffers(this.player),
+      rerolls: p.rerolls,
+      setInfo: (tag) => ({ have: p.tagCount(tag), need: SETS[tag].need }),
+      onReroll: (offers, index) => {
+        const next = p.reroll(this.player, offers, index);
+        return next && { offers: next, rerolls: p.rerolls };
+      },
+      onPick: (offer) => this.chooseAugment(offer),
+    });
   }
 
-  private chooseSkill(offer: SkillOffer): void {
-    this.progression.choose(offer.skill, this.player);
+  private chooseAugment(offer: AugmentOffer): void {
+    const granted = this.progression.choose(offer.augment, this.player);
+    this.player.shield = Math.max(this.player.shield, this.player.stats.shieldPerRoom);
     this.screens.hide();
     this.refreshHealth();
     this.refreshBuild();
+    if (granted.length) this.hud.toast(`🎲 ${granted.join(' · ')}`, 2.4);
+    else if (offer.augment.tier !== 'silver') this.hud.toast(`${TIERS[offer.augment.tier].label}: ${offer.augment.name}`, 1.4);
     this.state = 'playing';
   }
 
@@ -305,11 +335,28 @@ export class Game {
   private bindEvents(): void {
     const { events, player } = this;
 
-    events.on('enemy:damaged', ({ enemy, amount, critical }) =>
-      this.damageNumbers.spawn(enemy.x, enemy.centerY + 0.4, enemy.z, critical ? `${amount}!` : `${amount}`, critical ? 'crit' : 'normal'),
-    );
+    events.on('enemy:damaged', ({ enemy, amount, critical, kind }) => {
+      const y = enemy.centerY + 0.4;
+      if (kind === 'execute') return this.damageNumbers.spawn(enemy.x, y + 0.4, enemy.z, '처형!', 'crit');
+      if (kind === 'arrow') return this.damageNumbers.spawn(enemy.x, y, enemy.z, critical ? `${amount}!` : `${amount}`, critical ? 'crit' : 'normal');
+      this.damageNumbers.spawn(enemy.x, y - 0.3, enemy.z, `${amount}`, kind === 'dot' ? 'dot' : 'minor');
+    });
+    events.on('player:dodged', () => this.damageNumbers.spawn(player.x, 2, player.z, '회피', 'dodge'));
+    events.on('player:revived', () => {
+      this.hud.toast('🕊️ 불사조의 힘으로 부활!', 2.2);
+      this.cameraRig.shake(0.4);
+      this.refreshHealth();
+    });
+    events.on('augment:set', ({ tag }) => {
+      const set = SETS[tag];
+      this.hud.toast(`${set.icon} ${set.name} 시너지 발동! ${set.bonus}`, 2.8);
+      this.refreshBuild();
+    });
     events.on('enemy:spawned', ({ enemy }) => enemy.isBoss && this.beginBossFight(enemy));
     events.on('enemy:killed', ({ enemy }) => {
+      // XP goes straight to the player on kill (no gems to pick up).
+      this.progression.addXp(enemy.def.xp * player.stats.xpMul);
+      this.effects.collect(player.x, 1.3, player.z);
       if (!enemy.isBoss) return;
       this.cameraRig.shake(0.7);
       if (enemy === this.boss) this.endBossFight();
@@ -333,6 +380,9 @@ export class Game {
       this.hud.toast(info.phaseToasts[phase - 1] ?? `${info.name}이(가) 분노했다!`, 2.2);
       this.hud.flashHurt();
     });
+    events.on('boss:shield', ({ on }) =>
+      this.hud.toast(on ? '💀 소환수들이 망자의 군주를 지킨다! (받는 피해 -75%)' : '🦴 뼈 보호막이 깨졌다!', on ? 2.4 : 1.6),
+    );
     events.on('hazard:exploded', () => this.cameraRig.shake(0.12));
     events.on('camera:shake', ({ intensity }) => this.cameraRig.shake(intensity));
     events.on('xp:changed', ({ xp, needed, level }) => this.hud.setXp(xp / needed, level));
@@ -343,7 +393,7 @@ export class Game {
   }
 
   private refreshHealth(): void {
-    this.hud.setHealth(this.player.hp, this.player.maxHp);
+    this.hud.setHealth(this.player.hp, this.player.maxHp, this.player.shield);
   }
 
   private refreshBuild(): void {
@@ -351,7 +401,8 @@ export class Game {
     const arrowsPerVolley = s.frontArrows + s.diagonalPairs * 2 + (s.sideArrows ? 2 : 0) + (s.backArrow ? 1 : 0);
     this.hud.setBuild(
       { damage: s.damage, attacksPerSecond: s.volleys / s.attackInterval, critChance: s.critChance, arrowsPerVolley },
-      this.progression.owned().map(({ skill, stacks }) => ({ ...skill, stacks })),
+      this.progression.owned().map(({ augment, stacks }) => ({ ...augment, stacks })),
+      this.progression.sets().map((p) => ({ ...p, icon: SETS[p.tag].icon, name: SETS[p.tag].name, bonus: SETS[p.tag].bonus })),
     );
   }
 

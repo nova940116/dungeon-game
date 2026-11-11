@@ -1,12 +1,11 @@
 #!/usr/bin/env node
 /**
- * Builds the two boss models entirely from code (no source assets):
- *   public/assets/models/characters/boss_golem.glb       mid-boss  (scripts/blender/boss_golem.py)
- *   public/assets/models/characters/boss_demon_lord.glb  stage boss (scripts/blender/boss_demon.py)
+ * Builds the boss models and their summons entirely from code (no source assets) into
+ * public/assets/models/characters/ — see scripts/blender/build_bosses.py for the list.
  *
  *   npm run assets:bosses                    # Blender (headless) → GLB
  *   npm run assets:bosses -- --preview       # also render pose sheets into .asset-cache/boss-preview/
- *   npm run assets:bosses -- --only golem    # or: --only demon
+ *   npm run assets:bosses -- --only spider,spiderling   # any of: golem demon spider spiderling necro skeleton wraith knight
  *
  * Blender is found at $BLENDER, or /Applications/Blender.app on macOS, or `blender` on PATH.
  */
@@ -42,7 +41,7 @@ try {
     throw err;
   }
 }
-for (const line of log.split('\n')) if (/^(Golem|Demon|clip |exported|preview)/.test(line)) console.log(`  ${line.replace(ROOT + '/', '')}`);
+for (const line of log.split('\n')) if (/^(\w+: \d+ verts|\w+: height|clip |exported|preview)/.test(line)) console.log(`  ${line.replace(ROOT + '/', '')}`);
 if (/Traceback|Error:/.test(log)) {
   console.error(log.split('\n').filter((l) => /Traceback|Error|File "/.test(l)).join('\n'));
   process.exit(1);

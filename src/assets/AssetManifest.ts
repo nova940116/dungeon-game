@@ -50,6 +50,31 @@ export const MODELS = {
     url: model('characters/boss_golem.glb'), fit: 'height', size: 4.7, animated: true, pivot: 'origin',
     clips: { idle: 'Idle', move: 'Walk', attack: 'Attack', punch: 'Punch', roar: 'Roar', death: 'Death' },
   },
+  spiderQueen: {
+    url: model('characters/boss_spider_queen.glb'), fit: 'height', size: 3.4, animated: true, pivot: 'origin',
+    clips: { idle: 'Idle', move: 'Walk', attack: 'Attack', jump: 'Jump', roar: 'Roar', death: 'Death' },
+  },
+  necromancer: {
+    url: model('characters/boss_necromancer.glb'), fit: 'height', size: 4.6, animated: true, pivot: 'origin',
+    clips: { idle: 'Idle', move: 'Walk', attack: 'Attack', punch: 'Punch', roar: 'Roar', death: 'Death' },
+  },
+  // Summons (also built by `npm run assets:bosses`).
+  spiderling: {
+    url: model('characters/enemy_spiderling.glb'), fit: 'height', size: 0.62, animated: true, pivot: 'origin',
+    clips: { idle: 'Idle', move: 'Walk', attack: 'Attack', death: 'Death' },
+  },
+  skeleton: {
+    url: model('characters/enemy_skeleton.glb'), fit: 'height', size: 2.0, animated: true, pivot: 'origin',
+    clips: { idle: 'Idle', move: 'Walk', attack: 'Attack', death: 'Death' },
+  },
+  wraith: {
+    url: model('characters/enemy_wraith.glb'), fit: 'height', size: 2.1, animated: true, pivot: 'origin',
+    clips: { idle: 'Idle', move: 'Walk', attack: 'Attack', death: 'Death' },
+  },
+  deathKnight: {
+    url: model('characters/enemy_death_knight.glb'), fit: 'height', size: 3.6, animated: true, pivot: 'origin',
+    clips: { idle: 'Idle', move: 'Walk', attack: 'Attack', punch: 'Punch', death: 'Death' },
+  },
   demonLord: {
     url: model('characters/boss_demon_lord.glb'), fit: 'height', size: 6.7, animated: true, pivot: 'origin',
     clips: { idle: 'Idle', move: 'Walk', run: 'Run', attack: 'Weapon', punch: 'Punch', jump: 'Jump', roar: 'Roar', death: 'Death' },

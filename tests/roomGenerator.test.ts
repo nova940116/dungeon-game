@@ -18,11 +18,10 @@ describe('RoomGenerator', () => {
     }
   });
 
-  it('spawns a single mid-boss on room 5 and a stage boss on room 10', () => {
+  it('cycles four bosses: golem (5), demon (10), spider queen (15), necromancer (20), then repeats', () => {
+    const boss = (room: number) => generateWave(room, true, [])[0].type;
     expect(generateWave(5, true, [])).toEqual([{ type: 'midboss', x: 0, z: -6 }]);
-    expect(generateWave(10, true, [])).toEqual([{ type: 'boss', x: 0, z: -6 }]);
-    expect(generateWave(15, true, [])).toEqual([{ type: 'midboss', x: 0, z: -6 }]);
-    expect(generateWave(20, true, [])).toEqual([{ type: 'boss', x: 0, z: -6 }]);
+    expect([5, 10, 15, 20, 25, 30, 35, 40].map(boss)).toEqual(['midboss', 'boss', 'spiderQueen', 'necromancer', 'midboss', 'boss', 'spiderQueen', 'necromancer']);
   });
 
   it('never spawns enemies inside rocks and respects per-room caps', () => {

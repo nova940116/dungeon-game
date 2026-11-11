@@ -55,7 +55,7 @@ export class MidBoss extends BossEnemy {
           this.hurl(0.5 / rage);
           this.phase.step = 1;
         } else if (this.timer <= 0) {
-          for (let i = -3; i <= 3; i++) world.spawnBullet(this.x, this.z, this.face + i * 0.2, 5.5 * rage, true);
+          for (let i = -3; i <= 3; i++) world.spawnBullet(this.x, this.z, this.face + i * 0.2, 5.5 * rage, 'rock', true);
           world.events.emit('enemy:attack', { enemy: this, kind: 'throw' });
           if (++this.phase.step > (enraged ? 3 : 2)) this.endAttack();
           else this.hurl(0.55 / rage);
@@ -73,7 +73,7 @@ export class MidBoss extends BossEnemy {
           this.phase.step = 1;
         } else if (this.timer <= 0) {
           const n = enraged ? 20 : 14;
-          for (let i = 0; i < n; i++) world.spawnBullet(this.x, this.z, (i / n) * Math.PI * 2 + this.face, 4.5 * rage, true);
+          for (let i = 0; i < n; i++) world.spawnBullet(this.x, this.z, (i / n) * Math.PI * 2 + this.face, 4.5 * rage, 'crystal', true);
           world.effects.shockwave(this.x, this.z, SLAM_RADIUS, this.info.color);
           world.events.emit('enemy:attack', { enemy: this, kind: 'slam' });
           world.events.emit('camera:shake', { intensity: 0.3 });

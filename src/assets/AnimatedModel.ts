@@ -25,6 +25,8 @@ export class AnimatedModel {
   private oneShot: THREE.AnimationAction | null = null;
   private holdOneShot = false;
   private flashColor: number | null = null;
+  /** Playback speed of every clip (slows / freezes). */
+  timeScale = 1;
 
   constructor(readonly key: ModelKey) {
     const instance = assets.instantiate(key);
@@ -156,7 +158,7 @@ export class AnimatedModel {
   }
 
   update(dt: number): void {
-    this.mixer.update(dt);
+    this.mixer.update(dt * this.timeScale);
   }
 
   dispose(): void {

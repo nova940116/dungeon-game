@@ -105,7 +105,7 @@ export class Boss extends BossEnemy {
         this.model.setLoop('idle');
         const n = 20 + this.phaseNo * 2;
         for (let i = 0; i < n; i++) {
-          world.spawnBullet(this.x, this.z, (i / n) * Math.PI * 2 + this.phase.step * 0.17, 5 * rage, true);
+          world.spawnBullet(this.x, this.z, (i / n) * Math.PI * 2 + this.phase.step * 0.17, 5 * rage, 'fireball', true);
         }
         world.effects.shockwave(this.x, this.z, 3, FIRE);
         world.events.emit('enemy:attack', { enemy: this, kind: 'slam' });
@@ -122,7 +122,7 @@ export class Boss extends BossEnemy {
         this.model.playOnce('attack', { timeScale: 2 * rage });
         if (this.phase.step === 0) world.events.emit('enemy:attack', { enemy: this, kind: 'cast' });
         const half = this.phaseNo > 0 ? 4 : 3;
-        for (let i = -half; i <= half; i++) world.spawnBullet(this.x, this.z, this.face + i * 0.16, 7 * rage);
+        for (let i = -half; i <= half; i++) world.spawnBullet(this.x, this.z, this.face + i * 0.16, 7 * rage, 'fireball');
         this.timer = 0.4;
         if (++this.phase.step >= 4) this.endAttack();
         break;
@@ -150,7 +150,7 @@ export class Boss extends BossEnemy {
         }
         const arms = this.phaseNo >= 2 ? 3 : 2;
         this.spiralAngle += 0.29;
-        for (let i = 0; i < arms; i++) world.spawnBullet(this.x, this.z, this.spiralAngle + (i / arms) * Math.PI * 2, 5.2);
+        for (let i = 0; i < arms; i++) world.spawnBullet(this.x, this.z, this.spiralAngle + (i / arms) * Math.PI * 2, 5.2, 'shadow');
         this.timer = 0.085;
         if (++this.phase.step >= 26 + this.phaseNo * 5) this.endAttack();
         break;
@@ -168,7 +168,7 @@ export class Boss extends BossEnemy {
     this.phase = { kind: 'walk' };
     this.timer = 1.3;
     this.attackIndex = 0;
-    for (let i = 0; i < 24; i++) world.spawnBullet(this.x, this.z, (i / 24) * Math.PI * 2, 3.6, true);
+    for (let i = 0; i < 24; i++) world.spawnBullet(this.x, this.z, (i / 24) * Math.PI * 2, 3.6, 'shadow', true);
     for (const x of [-4.5, 4.5]) world.spawnEnemy('bat', x, this.z);
     if (phase >= 2) for (const x of [-3, 3]) world.spawnEnemy('slime', x, clamp(this.z + 3, world.room.bounds.z0 + 2, world.room.bounds.z1 - 2));
   }
@@ -211,7 +211,7 @@ export class Boss extends BossEnemy {
         world.effects.shockwave(this.x, this.z, 3.4, FIRE);
         world.events.emit('enemy:attack', { enemy: this, kind: 'impact' });
         this.model.playOnce('punch', { timeScale: 1.2 });
-        for (let i = 0; i < 12; i++) world.spawnBullet(this.x, this.z, (i / 12) * Math.PI * 2, 4.5, true);
+        for (let i = 0; i < 12; i++) world.spawnBullet(this.x, this.z, (i / 12) * Math.PI * 2, 4.5, 'fireball', true);
         if (--this.chargesLeft > 0) {
           this.phase.step = 0;
           this.vx = this.vz = 0;

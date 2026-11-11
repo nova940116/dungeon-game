@@ -1,6 +1,10 @@
 import { BALANCE } from '../config';
 
-export type EnemyType = 'slime' | 'bat' | 'shooter' | 'golem' | 'midboss' | 'boss';
+export type EnemyType =
+  | 'slime' | 'bat' | 'shooter' | 'golem'
+  | 'midboss' | 'spiderQueen' | 'boss' | 'necromancer'
+  // summons
+  | 'spiderling' | 'skeleton' | 'wraith' | 'deathKnight';
 
 /** Presentation + phase data for boss-class enemies. */
 export interface BossInfo {
@@ -30,6 +34,10 @@ export interface EnemyDef {
   flying: boolean;
   boss: boolean;
   bossInfo?: BossInfo;
+  /** Summoned undead claw their way out of the ground instead of fading in. */
+  rise?: boolean;
+  /** Colour of the summoning circle when it appears. */
+  spawnColor?: number;
   /** Max number of this type per room (undefined = no limit). */
   maxPerRoom?: number;
 }
@@ -54,6 +62,27 @@ export const ENEMY_DEFS: Record<EnemyType, EnemyDef> = {
       phaseToasts: ['고대 골렘이 격노했다!'],
     },
   }),
+  spiderQueen: def({
+    hp: 700, radius: 1.6, contactDamage: 22, xp: 60, barHeight: 3.9, boss: true,
+    bossInfo: {
+      title: '중간 보스', name: '서리 거미 여왕', stage: false, color: 0x6fd8ff,
+      phaseAt: [0.5],
+      phaseToasts: ['서리 거미 여왕이 격노했다!'],
+    },
+  }),
+  necromancer: def({
+    hp: 900, radius: 1.25, contactDamage: 20, xp: 140, barHeight: 4.9, boss: true,
+    bossInfo: {
+      title: '스테이지 보스', name: '망자의 군주', stage: true, color: 0x5dff7a,
+      phaseAt: [0.66, 0.33],
+      phaseToasts: ['망자의 군주가 죽음의 기사를 깨운다!', '망자의 군주가 모든 망자를 일으킨다!'],
+    },
+  }),
+  // Summons: little XP so endless summoning can't be farmed.
+  spiderling: def({ hp: 26, radius: 0.4, contactDamage: 9, xp: 1, barHeight: 0.95, spawnColor: 0x6fd8ff }),
+  skeleton: def({ hp: 70, radius: 0.45, contactDamage: 14, xp: 2, barHeight: 2.3, rise: true, spawnColor: 0x5dff7a }),
+  wraith: def({ hp: 55, radius: 0.45, contactDamage: 10, xp: 2, barHeight: 2.4, hoverY: 0.45, flying: true, spawnColor: 0x5dff7a }),
+  deathKnight: def({ hp: 520, radius: 0.85, contactDamage: 24, xp: 10, barHeight: 3.9, rise: true, spawnColor: 0x5dff7a }),
   boss: def({
     hp: 950, radius: 1.7, contactDamage: 30, xp: 110, barHeight: 6, boss: true,
     bossInfo: {
@@ -64,10 +93,13 @@ export const ENEMY_DEFS: Record<EnemyType, EnemyDef> = {
   }),
 };
 
-/** Which boss guards a room: a stage boss every `stageBossEvery` rooms, a mid-boss on the other boss rooms. */
+/** Boss rooms in order (5, 10, 15, 20), then the cycle repeats (25 = golem again, …). */
+const BOSS_CYCLE: readonly EnemyType[] = ['midboss', 'boss', 'spiderQueen', 'necromancer'];
+
+/** Which boss guards a room (null for regular rooms). Stage bosses fall on every `stageBossEvery`-th room. */
 export function bossTypeForRoom(roomNo: number): EnemyType | null {
   if (roomNo <= 0 || roomNo % BALANCE.bossEvery !== 0) return null;
-  return roomNo % BALANCE.stageBossEvery === 0 ? 'boss' : 'midboss';
+  return BOSS_CYCLE[(roomNo / BALANCE.bossEvery - 1) % BOSS_CYCLE.length];
 }
 
 /** Which enemies can appear, by room number (first matching entry wins). */
