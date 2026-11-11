@@ -471,6 +471,212 @@ canvas {
   }
 }
 
+/* ---------- augment draft ---------- */
+.panel--draft {
+  max-width: 640px;
+}
+.rerolls {
+  color: var(--accent);
+  font-weight: 700;
+}
+.card-slot {
+  flex: 1 1 160px;
+  max-width: 196px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.card-slot .card {
+  flex: 1;
+  max-width: none;
+  position: relative;
+  padding-top: 26px;
+  --tier: #b8c2d6;
+  --tier-glow: rgba(184, 194, 214, 0.25);
+  border-color: var(--tier);
+  box-shadow: 0 0 18px var(--tier-glow), inset 0 0 24px var(--tier-glow);
+}
+.card--gold {
+  --tier: #ffc94a;
+  --tier-glow: rgba(255, 190, 60, 0.35);
+  background: linear-gradient(#3d3420, #1f1a10);
+}
+.card--prism {
+  --tier: #e6a8ff;
+  --tier-glow: rgba(200, 140, 255, 0.45);
+  background: linear-gradient(135deg, #3a2550, #1d2a4a 45%, #24443f);
+  border-image: linear-gradient(135deg, #ff8ad8, #8ab4ff, #8affc8, #ffe08a) 1;
+  border-radius: 0;
+}
+.card-slot .card:hover,
+.card-slot .card:focus-visible {
+  border-color: #fff;
+}
+.card--prism:hover,
+.card--prism:focus-visible {
+  border-image: linear-gradient(135deg, #fff, #ffd6f3, #fff) 1;
+}
+.card__tier {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 1px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #111;
+  background: var(--tier);
+}
+.card--prism .card__tier {
+  background: linear-gradient(90deg, #ff8ad8, #8ab4ff, #8affc8);
+}
+.card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+}
+.tag {
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--muted);
+  white-space: nowrap;
+}
+.tag--complete {
+  color: #111;
+  background: var(--accent);
+}
+.card.is-fresh {
+  animation: card-flip 0.35s ease-out;
+}
+@keyframes card-flip {
+  from {
+    transform: rotateY(90deg) scale(0.9);
+    opacity: 0.2;
+  }
+}
+.reroll {
+  padding: 6px 0;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.reroll:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--accent);
+}
+.reroll:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* owned augments (HUD) by tier, synergy counters */
+.skill__badge {
+  display: none;
+}
+.build .build__skills--compact {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+.build .build__skills--compact .skill {
+  position: relative;
+  padding: 3px;
+  border-left-width: 0;
+  border-bottom: 2px solid var(--card-border);
+}
+.build__skills--compact .skill--gold {
+  border-bottom-color: #ffc94a;
+}
+.build__skills--compact .skill--prism {
+  border-bottom-color: #e6a8ff;
+}
+.build__skills--compact .skill__name,
+.build__skills--compact .skill__pips,
+.build__skills--compact .skill__count {
+  display: none;
+}
+.build__skills--compact .skill__badge {
+  display: block;
+  position: absolute;
+  right: -3px;
+  bottom: -4px;
+  min-width: 13px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #111;
+  font-size: 9px;
+  font-weight: 900;
+  line-height: 13px;
+  text-align: center;
+}
+.skill--gold {
+  border-left-color: #ffc94a;
+}
+.skill--prism {
+  border-left-color: #e6a8ff;
+  background: linear-gradient(90deg, rgba(160, 100, 220, 0.35), var(--panel) 60%);
+}
+.stat--set {
+  color: var(--muted);
+}
+.stat--set.is-active {
+  color: #111;
+  background: var(--accent);
+}
+/* Shield: its own sky-blue segment after the HP fill (same colour as the bar above the player). */
+.bar__fill--shield {
+  width: 0;
+  border-radius: 0 999px 999px 0;
+  background: repeating-linear-gradient(-45deg, #7fe3ff 0 6px, #bff2ff 6px 9px);
+  box-shadow: 0 0 8px rgba(127, 227, 255, 0.8);
+}
+
+/* augment damage numbers */
+.damage-number--minor {
+  color: #d8e2ff;
+  font-size: 13px;
+}
+.damage-number--dot {
+  color: #ffb36b;
+  font-size: 12px;
+}
+.damage-number--dodge {
+  color: #9fd8ff;
+  font-size: 16px;
+}
+
+@media (max-width: 520px) {
+  .card-slot {
+    flex-basis: 30%;
+  }
+  .card-slot .card {
+    padding: 22px 6px 10px;
+  }
+  .card__desc {
+    font-size: 11px;
+  }
+  .tag {
+    font-size: 10px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .card.is-fresh {
+    animation: none;
+  }
+}
+
 /* ---------- loading ---------- */
 .loading {
   width: min(320px, 80%);

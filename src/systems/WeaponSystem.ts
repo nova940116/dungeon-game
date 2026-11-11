@@ -9,25 +9,34 @@ const FRONT_SPACING = 0.3;
 /** Delay before the first shot after stopping — long enough to see the bow being drawn. */
 const MOVE_FIRE_DELAY = 0.24;
 
+/** Seconds of standing still for the full `stillRamp` attack speed bonus. */
+const STILL_RAMP_TIME = 3;
+
 interface QueuedVolley {
   delay: number;
   angle: number;
+  moving: boolean;
 }
 
 /**
- * The core genre rule: the player fires automatically, but only while standing still.
- * Targets the nearest enemy in line of sight (falls back to nearest overall).
+ * The core genre rule: the player fires automatically, but only while standing still
+ * (unless an augment allows firing on the move). Targets the nearest enemy in line of sight.
  */
 export class WeaponSystem {
   private queue: QueuedVolley[] = [];
+  private stillTime = 0;
 
   reset(): void {
     this.queue = [];
+    this.stillTime = 0;
   }
 
   update(dt: number, world: World, moving: boolean): void {
     const player = world.player;
-    if (moving) {
+    const s = player.stats;
+    this.stillTime = moving ? 0 : this.stillTime + dt;
+    const runAndGun = moving && s.fireWhileMoving > 0;
+    if (moving && !runAndGun) {
       player.aiming = false;
       player.attackCooldown = Math.max(player.attackCooldown, MOVE_FIRE_DELAY);
       this.queue = [];
@@ -35,21 +44,22 @@ export class WeaponSystem {
     }
 
     const target = this.findTarget(world);
-    player.aiming = target !== null;
+    player.aiming = target !== null && !moving;
     if (target) {
       const angle = angleTo(player.x, player.z, target.x, target.z);
-      player.aimAt(angle);
-      player.attackCooldown -= dt;
+      if (!moving) player.aimAt(angle);
+      player.attackCooldown -= dt * (moving ? s.fireWhileMoving : 1);
       if (player.attackCooldown <= 0) {
-        this.fireVolley(world, angle);
-        for (let i = 1; i < player.stats.volleys; i++) this.queue.push({ delay: i * VOLLEY_GAP, angle });
-        player.attackCooldown = player.stats.attackInterval;
+        this.fireVolley(world, angle, moving);
+        for (let i = 1; i < s.volleys; i++) this.queue.push({ delay: i * VOLLEY_GAP, angle, moving });
+        const ramp = 1 + s.stillRamp * Math.min(1, this.stillTime / STILL_RAMP_TIME);
+        player.attackCooldown = s.attackInterval / ramp;
       }
     }
 
     for (const q of this.queue) {
       q.delay -= dt;
-      if (q.delay <= 0) this.fireVolley(world, q.angle);
+      if (q.delay <= 0) this.fireVolley(world, q.angle, q.moving);
     }
     this.queue = this.queue.filter((q) => q.delay > 0);
   }
@@ -75,7 +85,7 @@ export class WeaponSystem {
     return nearestVisible ?? nearest;
   }
 
-  private fireVolley(world: World, angle: number): void {
+  private fireVolley(world: World, angle: number, moving = false): void {
     const { player } = world;
     const s = player.stats;
     const ox = player.x + Math.sin(angle) * 0.4;
@@ -96,7 +106,7 @@ export class WeaponSystem {
       world.spawnArrow(player.x, player.z, angle - Math.PI / 2);
     }
     if (s.backArrow) world.spawnArrow(player.x, player.z, angle + Math.PI);
-    player.releaseArrow();
+    if (!moving) player.releaseArrow(); // no bow animation while running
     world.effects.muzzle(ox, 1.0, oz);
     world.events.emit('weapon:fired', { x: player.x, z: player.z });
   }

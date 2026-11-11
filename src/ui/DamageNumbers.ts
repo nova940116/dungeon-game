@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { rand, removeWhere } from '../utils/math';
 import { requireElement } from './dom';
 
-export type NumberStyle = 'normal' | 'crit' | 'hurt' | 'heal';
+export type NumberStyle = 'normal' | 'crit' | 'hurt' | 'heal' | 'minor' | 'dot' | 'dodge';
 
 interface FloatingNumber {
   el: HTMLDivElement;

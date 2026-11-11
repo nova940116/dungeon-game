@@ -1,4 +1,5 @@
-import type { SkillOffer } from '../systems/ProgressionSystem';
+import { SETS, TIERS, type TagId } from '../data/augments';
+import type { AugmentOffer } from '../systems/ProgressionSystem';
 import { h, requireElement } from './dom';
 
 type KeyHandler = (e: KeyboardEvent) => void;
@@ -54,39 +55,84 @@ export class Screens {
       h('h1', { className: 'panel__logo' }, '화살 던전'),
       h('p', {}, '멈춰 서면 가장 가까운 적에게 ', h('b', {}, '자동으로 활을 쏩니다.'), h('br'), '움직이는 동안에는 공격하지 않아요 — 피하고, 멈추고, 쏘세요!'),
       h('p', {}, '이동: ', kbd('WASD'), ' / ', kbd('방향키'), ' · 모바일은 화면을 드래그'),
-      h('p', {}, '방을 정리하면 위쪽 문이 열립니다. 5번째 방마다 보스 등장.'),
+      h('p', {}, '방을 정리하면 위쪽 문이 열립니다. 레벨 업마다 증강을 고르고, 보스를 잡으면 희귀·전설 증강 보상!'),
       opts.best > 0 && h('p', {}, `최고 기록: 방 ${opts.best}`),
       h('button', { className: 'btn', onClick: start }, '시작하기'),
     );
     this.open(panel, (e) => isConfirmKey(e) && start());
   }
 
-  showSkillPick(offers: SkillOffer[], pick: (offer: SkillOffer) => void): void {
-    const onPick = (offer: SkillOffer) => {
+  /** Level-up / boss-reward draft: three augment cards, each can be rerolled while rerolls last. */
+  showAugmentPick(opts: {
+    title: string;
+    offers: AugmentOffer[];
+    rerolls: number;
+    setInfo: (tag: TagId) => { have: number; need: number };
+    onReroll: (offers: AugmentOffer[], index: number) => { offers: AugmentOffer[]; rerolls: number } | null;
+    onPick: (offer: AugmentOffer) => void;
+  }): void {
+    let { offers, rerolls } = opts;
+    let picked = false;
+    const pick = (offer: AugmentOffer) => {
+      if (picked) return;
+      picked = true;
       this.soundHook('select');
-      pick(offer);
+      opts.onPick(offer);
     };
-    const cards = offers.map((offer) =>
-      h(
-        'button',
-        { className: 'card', onClick: () => onPick(offer) },
-        h('div', { className: 'card__icon' }, offer.skill.icon),
-        h('b', { className: 'card__name' }, offer.skill.name),
-        h('small', { className: 'card__desc' }, offer.skill.description),
-        offer.stacks > 0 && h('em', { className: 'card__stacks' }, `보유 ${offer.stacks}`),
-      ),
-    );
-    const panel = h(
-      'div',
-      { className: 'panel' },
-      h('h2', { className: 'panel__title' }, '레벨 업! ✨'),
-      h('p', {}, '스킬을 하나 고르세요 ', kbd('1'), ' ', kbd('2'), ' ', kbd('3')),
-      h('div', { className: 'cards' }, ...cards),
-    );
-    this.open(panel, (e) => {
-      const index = ['Digit1', 'Digit2', 'Digit3'].indexOf(e.code);
-      if (index >= 0 && offers[index]) onPick(offers[index]);
-    });
+    const reroll = (index: number) => {
+      const next = opts.onReroll(offers, index);
+      if (!next) return;
+      this.soundHook('click');
+      ({ offers, rerolls } = next);
+      render(index);
+    };
+
+    const card = (offer: AugmentOffer, index: number, fresh: boolean) => {
+      const a = offer.augment;
+      const tags = a.tags.map((tag) => {
+        const set = SETS[tag];
+        const { have, need } = opts.setInfo(tag);
+        const owned = offer.stacks > 0;
+        const after = owned ? have : have + 1;
+        const completes = !owned && have < need && after >= need;
+        return h(
+          'span',
+          { className: `tag${completes ? ' tag--complete' : ''}`, attrs: { title: `${set.name} ${need}개: ${set.bonus}` } },
+          `${set.icon} ${set.name} ${Math.min(after, need)}/${need}`,
+          completes && ' 시너지!',
+        );
+      });
+      return h(
+        'div',
+        { className: 'card-slot' },
+        h(
+          'button',
+          { className: `card card--${a.tier}${fresh ? ' is-fresh' : ''}`, onClick: () => pick(offer), attrs: { 'aria-label': `${index + 1}번: ${TIERS[a.tier].label} ${a.name}. ${a.description}` } },
+          h('span', { className: 'card__tier' }, TIERS[a.tier].label),
+          h('div', { className: 'card__icon' }, a.icon),
+          h('b', { className: 'card__name' }, a.name),
+          h('small', { className: 'card__desc' }, a.description),
+          tags.length > 0 && h('div', { className: 'card__tags' }, ...tags),
+          offer.stacks > 0 && h('em', { className: 'card__stacks' }, `보유 ${offer.stacks}${a.maxStacks < 99 ? ` / ${a.maxStacks}` : ''}`),
+        ),
+        h('button', { className: 'reroll', onClick: () => reroll(index), attrs: rerolls > 0 ? {} : { disabled: '' } }, `↻ 다시 뽑기`),
+      );
+    };
+
+    const render = (freshIndex = -1) => {
+      const panel = h(
+        'div',
+        { className: 'panel panel--draft' },
+        h('h2', { className: 'panel__title' }, opts.title),
+        h('p', {}, '증강을 하나 고르세요 ', kbd('1'), ' ', kbd('2'), ' ', kbd('3'), h('span', { className: 'rerolls' }, ` · 다시 뽑기 ${rerolls}회`)),
+        h('div', { className: 'cards' }, ...offers.map((o, i) => card(o, i, i === freshIndex))),
+      );
+      this.open(panel, (e) => {
+        const index = ['Digit1', 'Digit2', 'Digit3'].indexOf(e.code);
+        if (index >= 0 && offers[index]) pick(offers[index]);
+      });
+    };
+    render();
   }
 
   showGameOver(opts: { roomNo: number; level: number; best: number; onRestart: () => void }): void {

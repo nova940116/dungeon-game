@@ -1,9 +1,11 @@
-import { clamp } from '../utils/math';
+import { clamp, shieldedRatios } from '../utils/math';
 import { h, requireElement } from './dom';
 
 const FADE_MS = 280;
 /** Skills with at most this many stacks show pips (●●○); others show a ×N count. */
 const MAX_PIPS = 5;
+/** Above this many owned augments the HUD list collapses to icons. */
+const COMPACT_AFTER = 6;
 
 export interface SkillBadge {
   icon: string;
@@ -11,12 +13,25 @@ export interface SkillBadge {
   description: string;
   stacks: number;
   maxStacks: number;
+  /** Rarity ('silver' | 'gold' | 'prism'): colours the badge. */
+  tier?: string;
+}
+
+export interface SetBadge {
+  icon: string;
+  name: string;
+  bonus: string;
+  have: number;
+  need: number;
+  active: boolean;
 }
 
 export interface BossBanner {
   title: string;
   name: string;
   stage: boolean;
+  /** Signature colour: tints the HP bar and intro banner. */
+  color?: number;
   /** HP ratios marked on the bar (phase thresholds). */
   phaseAt: readonly number[];
 }
@@ -33,6 +48,7 @@ export class Hud {
   private readonly room = requireElement('hud-room');
   private readonly hpFill = requireElement('hud-hp-fill');
   private readonly hpText = requireElement('hud-hp-text');
+  private readonly shieldFill = requireElement('hud-shield-fill');
   private readonly level = requireElement('hud-level');
   private readonly xpFill = requireElement('hud-xp-fill');
   private readonly toastEl = requireElement('toast');
@@ -51,6 +67,7 @@ export class Hud {
   private readonly bossIntro = requireElement('boss-intro');
   private readonly dread = requireElement('dread-vignette');
   private toastTime = 0;
+  private healthKey = '';
   private introTime = 0;
 
   /** Mute button + "M" shortcut. `toggle` returns the new muted state. */
@@ -84,9 +101,16 @@ export class Hud {
     this.room.textContent = `방 ${roomNo}`;
   }
 
-  setHealth(hp: number, max: number): void {
-    this.hpFill.style.width = `${clamp(hp / max, 0, 1) * 100}%`;
-    this.hpText.textContent = `${Math.ceil(hp)} / ${Math.round(max)}`;
+  /** Cheap to call every frame: only touches the DOM when something changed. */
+  setHealth(hp: number, max: number, shield = 0): void {
+    const key = `${Math.ceil(hp)}|${Math.round(max)}|${Math.ceil(shield)}`;
+    if (key === this.healthKey) return;
+    this.healthKey = key;
+    const { hp: hpRatio, shield: shieldRatio } = shieldedRatios(hp, max, shield);
+    this.hpFill.style.width = `${hpRatio * 100}%`;
+    this.shieldFill.style.left = `${hpRatio * 100}%`;
+    this.shieldFill.style.width = `${shieldRatio * 100}%`;
+    this.hpText.textContent = `${Math.ceil(hp)} / ${Math.round(max)}${shield > 0 ? `  +${Math.ceil(shield)}` : ''}`;
   }
 
   setXp(ratio: number, level: number): void {
@@ -95,13 +119,23 @@ export class Hud {
   }
 
   /** Current build: key attack stats + every owned skill with its stack level. */
-  setBuild(stats: StatSummary, skills: SkillBadge[]): void {
+  setBuild(stats: StatSummary, skills: SkillBadge[], sets: SetBadge[] = []): void {
     this.stats.replaceChildren(
       stat('⚔️', String(Math.round(stats.damage)), '공격력'),
       stat('⚡', `${stats.attacksPerSecond.toFixed(1)}/s`, '초당 공격'),
       stat('🎯', `${Math.round(stats.critChance * 100)}%`, '치명타 확률'),
       stat('➶', `×${stats.arrowsPerVolley}`, '한 번에 쏘는 화살'),
+      ...sets.map((s) =>
+        h(
+          'span',
+          { className: `stat stat--set${s.active ? ' is-active' : ''}`, attrs: { title: `${s.name} 시너지 (${s.have}/${s.need}) — ${s.bonus}` } },
+          h('span', { className: 'stat__icon' }, s.icon),
+          s.active ? '✓' : `${s.have}/${s.need}`,
+        ),
+      ),
     );
+    // Many augments: switch from named rows to a compact icon grid (names stay in the tooltip).
+    this.skills.classList.toggle('build__skills--compact', skills.length > COMPACT_AFTER);
     this.skills.replaceChildren(
       ...skills.map((s) => {
         const level =
@@ -110,10 +144,11 @@ export class Hud {
             : h('span', { className: 'skill__count' }, `×${s.stacks}`);
         return h(
           'li',
-          { className: `skill${s.stacks >= s.maxStacks ? ' skill--max' : ''}`, attrs: { title: `${s.name} — ${s.description}` } },
+          { className: `skill skill--${s.tier ?? 'silver'}${s.stacks >= s.maxStacks ? ' skill--max' : ''}`, attrs: { title: `${s.name} — ${s.description}` } },
           h('span', { className: 'skill__icon' }, s.icon),
           h('span', { className: 'skill__name' }, s.name),
           level,
+          s.stacks > 1 && h('span', { className: 'skill__badge' }, s.stacks),
         );
       }),
     );
@@ -131,6 +166,15 @@ export class Hud {
     this.bossName.textContent = boss.name;
     this.bossMarks.replaceChildren(...boss.phaseAt.map((ratio) => h('i', { attrs: { style: `left:${ratio * 100}%` } })));
     this.bossBar.classList.toggle('boss-bar--stage', boss.stage);
+    for (const el of [this.bossBar, this.bossIntro]) {
+      if (boss.color === undefined) {
+        el.style.removeProperty('--boss');
+        el.style.removeProperty('--boss-deep');
+      } else {
+        el.style.setProperty('--boss', hex(boss.color));
+        el.style.setProperty('--boss-deep', hex(boss.color, 0.45));
+      }
+    }
     this.bossBar.classList.add('is-visible');
     this.setBossHealth(1);
 
@@ -177,3 +221,9 @@ export class Hud {
 
 const stat = (icon: string, value: string, label: string) =>
   h('span', { className: 'stat', attrs: { title: label, 'aria-label': `${label} ${value}` } }, h('span', { className: 'stat__icon' }, icon), value);
+
+/** CSS colour from a hex number, optionally darkened (0…1 brightness). */
+const hex = (color: number, k = 1) => {
+  const c = (shift: number) => Math.round(((color >> shift) & 255) * k);
+  return `rgb(${c(16)}, ${c(8)}, ${c(0)})`;
+};

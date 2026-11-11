@@ -130,6 +130,11 @@ export class EffectsSystem {
     this.emit({ x, y, z, life: 0.2, size: [size, 0.04], color, intensity: 1.8, texture: 'glow' });
   }
 
+  /** Small dust puff left behind by a flying rock. */
+  puff(x: number, y: number, z: number, color: number): void {
+    this.emit({ x: x + rand(-0.1, 0.1), y, z: z + rand(-0.1, 0.1), vy: rand(0.1, 0.4), life: 0.35, size: [0.25, 0.6], color, alpha: 0.4, texture: 'smoke', additive: false, spin: rand(-2, 2) });
+  }
+
   /** Footstep dust. */
   dust(x: number, z: number, color = 0xcfc4ad): void {
     this.emit({ x: x + rand(-0.15, 0.15), y: 0.1, z: z + rand(-0.15, 0.15), vy: rand(0.3, 0.8), vx: rand(-0.3, 0.3), vz: rand(-0.3, 0.3), life: 0.5, size: [0.3, 0.8], color, alpha: 0.45, texture: 'smoke', additive: false });
@@ -182,6 +187,33 @@ export class EffectsSystem {
     for (let i = 0; i < 4; i++) {
       const a = rand(0, Math.PI * 2);
       this.emit({ x: x + Math.cos(a) * radius * 0.5, y: 0.4, z: z + Math.sin(a) * radius * 0.5, vy: rand(1, 2), life: rand(0.6, 0.9), size: [radius * 0.6, radius * 1.4], color: 0x2a2022, alpha: 0.5, texture: 'smoke', additive: false, spin: rand(-2, 2) });
+    }
+  }
+
+  /** Jagged lightning line between two points (chain lightning, storm strikes). */
+  bolt(x0: number, y0: number, z0: number, x1: number, y1: number, z1: number, color: number): void {
+    const len = Math.hypot(x1 - x0, y1 - y0, z1 - z0);
+    const steps = Math.max(4, Math.round(len * 5));
+    let jx = 0;
+    let jy = 0;
+    let jz = 0;
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      const edge = i === 0 || i === steps ? 0 : 1;
+      jx = (jx + rand(-0.25, 0.25)) * 0.6 * edge;
+      jy = (jy + rand(-0.25, 0.25)) * 0.6 * edge;
+      jz = (jz + rand(-0.25, 0.25)) * 0.6 * edge;
+      this.emit({ x: x0 + (x1 - x0) * t + jx, y: y0 + (y1 - y0) * t + jy, z: z0 + (z1 - z0) * t + jz, life: rand(0.12, 0.2), size: [0.45, 0.1], color, intensity: 3, texture: 'glow' });
+    }
+    this.emit({ x: x1, y: y1, z: z1, life: 0.18, size: [1.1, 1.6], color, intensity: 2.5, texture: 'glow' });
+  }
+
+  /** Ice shards bursting off a frozen enemy. */
+  frostBurst(x: number, y: number, z: number): void {
+    this.emit({ x, y, z, life: 0.2, size: [1.2, 1.8], color: 0x9fe0ff, intensity: 2.2, texture: 'glow' });
+    for (let i = 0; i < 10; i++) {
+      const a = rand(0, Math.PI * 2);
+      this.emit({ x, y, z, vx: Math.cos(a) * 4, vy: rand(1, 4), vz: Math.sin(a) * 4, life: rand(0.25, 0.45), size: [0.3, 0.05], color: 0xd8f4ff, intensity: 2.4, texture: 'star', gravity: 8, drag: 2 });
     }
   }
 

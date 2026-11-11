@@ -33,3 +33,12 @@ export function removeWhere<T>(items: T[], predicate: (item: T) => boolean, onRe
   }
   items.length = write;
 }
+
+/**
+ * Splits a health bar between HP and shield. The bar spans max HP, or HP + shield when that is
+ * larger, so the shield segment always fits right after the HP segment.
+ */
+export function shieldedRatios(hp: number, max: number, shield: number): { hp: number; shield: number } {
+  const total = Math.max(max, hp + shield, 1);
+  return { hp: clamp(hp / total, 0, 1), shield: clamp(shield / total, 0, 1) };
+}
