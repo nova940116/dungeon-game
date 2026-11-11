@@ -1,8 +1,8 @@
 import type { Enemy } from '../entities/Enemy';
 import type { Arrow } from '../entities/projectiles/Arrow';
 import type { World } from '../game/World';
-import { angleTo, distance, rand } from '../utils/math';
-import { applyOnHit } from './HitEffects';
+import { angleTo, distance } from '../utils/math';
+import { strike } from './HitEffects';
 
 const ARROW_HIT_PADDING = 0.18;
 const ARROW_TRAIL_COLOR = 0xffc870;
@@ -80,17 +80,7 @@ export class CombatSystem {
   }
 
   private hitEnemy(arrow: Arrow, enemy: Enemy, world: World): void {
-    const s = world.player.stats;
-    const critical = Math.random() < s.critChance;
-    let amount = s.damage * arrow.damageMul * (critical ? s.critMultiplier : 1) * rand(0.92, 1.08);
-    if (s.ambush > 0 && enemy.hp >= enemy.maxHp) amount *= 1 + s.ambush;
-    if (s.sniper > 0) {
-      const d = distance(world.player.x, world.player.z, enemy.x, enemy.z);
-      amount *= 1 + s.sniper * Math.min(1, Math.max(0, d - 3) / 6);
-    }
-    world.effects.hit(enemy.x, enemy.centerY, enemy.z, critical);
-    world.damageEnemy(enemy, amount, arrow.minor ? 'shard' : 'arrow', critical);
-    applyOnHit(world, enemy, amount, arrow, critical);
+    strike(world, enemy, arrow.damageMul, arrow, arrow.minor ? 'shard' : 'arrow');
   }
 
   /** Bends the arrow toward the nearest enemy it hasn't hit yet. */

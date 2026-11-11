@@ -145,7 +145,14 @@ class AssetLibrary {
     source.traverse((o) => {
       if (o instanceof THREE.SkinnedMesh) o.skeleton.update();
     });
-    const box = new THREE.Box3().setFromObject(source, true);
+    const box = new THREE.Box3();
+    if (spec.fitExclude?.length) {
+      source.traverse((o) => {
+        if (o instanceof THREE.Mesh && !spec.fitExclude?.some((n) => o.name.startsWith(n))) box.expandByObject(o, true);
+      });
+    } else {
+      box.setFromObject(source, true);
+    }
     const raw = box.getSize(new THREE.Vector3());
     const measure = spec.fit === 'height' ? raw.y : Math.max(raw.x, raw.y, raw.z);
     const scale = measure > 0 ? spec.size / measure : 1;

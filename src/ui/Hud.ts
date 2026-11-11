@@ -41,6 +41,8 @@ export interface StatSummary {
   attacksPerSecond: number;
   critChance: number;
   arrowsPerVolley: number;
+  /** Melee fighters show their blade reach instead of arrows per volley. */
+  reach?: number;
 }
 
 /** Top bar (room, HP, level, XP), toast messages, hurt vignette and screen fades. */
@@ -124,7 +126,7 @@ export class Hud {
       stat('⚔️', String(Math.round(stats.damage)), '공격력'),
       stat('⚡', `${stats.attacksPerSecond.toFixed(1)}/s`, '초당 공격'),
       stat('🎯', `${Math.round(stats.critChance * 100)}%`, '치명타 확률'),
-      stat('➶', `×${stats.arrowsPerVolley}`, '한 번에 쏘는 화살'),
+      stats.reach !== undefined ? stat('📏', stats.reach.toFixed(1), '공격 사거리') : stat('➶', `×${stats.arrowsPerVolley}`, '한 번에 쏘는 화살'),
       ...sets.map((s) =>
         h(
           'span',

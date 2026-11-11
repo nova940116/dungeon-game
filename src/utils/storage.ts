@@ -9,6 +9,20 @@ export const storage = {
       return fallback;
     }
   },
+  getString(key: string, fallback = ''): string {
+    try {
+      return localStorage.getItem(key) ?? fallback;
+    } catch {
+      return fallback;
+    }
+  },
+  setString(key: string, value: string): void {
+    try {
+      localStorage.setItem(key, value);
+    } catch {
+      /* storage unavailable */
+    }
+  },
   setNumber(key: string, value: number): void {
     try {
       localStorage.setItem(key, String(value));

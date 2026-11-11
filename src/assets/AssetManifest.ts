@@ -16,6 +16,8 @@ export interface ModelSpec {
   rotationY?: number;
   /** Skinned + animated: instances get their own materials (for hit flash). */
   animated?: boolean;
+  /** Meshes (by name) left out when measuring the size — e.g. a sword that points up in the rest pose. */
+  fitExclude?: string[];
   /** Logical clip name → clip name in the file (matched by suffix, e.g. "Armature|Slime_Idle"). */
   clips?: Partial<Record<ClipName, string>>;
 }
@@ -27,7 +29,14 @@ export const MODELS = {
   // Built by `npm run assets:archer` (Blender): adventurer + bow/string/arrow rig + archery clips.
   player: {
     url: model('characters/player_archer.glb'), fit: 'height', size: 2.0, animated: true, pivot: 'origin',
-    clips: { idle: 'Bow_Idle', run: 'Run', draw: 'Bow_Draw', hold: 'Bow_Hold', release: 'Bow_Release', hit: 'HitRecieve', death: 'Death' },
+    clips: { idle: 'Bow_Idle', run: 'Run', draw: 'Bow_Draw', hold: 'Bow_Hold', release: 'Bow_Release', attack: 'Bow_Swing', hit: 'HitRecieve', death: 'Death' },
+  },
+  // Built by `npm run assets:swordsman` (Blender): holy knight — silver plate, great helm, royal blue cape, longsword, sword combo.
+  swordsman: {
+    // Same body scale as the archer: measured without the sword (it points straight up in the rest pose),
+    // and a bit taller overall because the helm crest rises above the archer's hair.
+    url: model('characters/player_swordsman.glb'), fit: 'height', size: 2.11, animated: true, pivot: 'origin', fitExclude: ['Longsword'],
+    clips: { idle: 'Idle', run: 'Run', attack: 'Slash', punch: 'Slash_Back', hit: 'HitRecieve', death: 'Death' },
   },
   slime: {
     url: model('characters/enemy_slime.glb'), fit: 'max', size: 1.4, animated: true,

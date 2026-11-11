@@ -49,4 +49,5 @@ export const ENGINE = {
 export const STORAGE_KEYS = {
   bestRoom: 'arrowDungeon.bestRoom',
   muted: 'arrowDungeon.muted',
+  playerClass: 'arrowDungeon.class',
 } as const;

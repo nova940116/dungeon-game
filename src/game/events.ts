@@ -1,13 +1,13 @@
 import type { TagId } from '../data/augments';
 import type { Enemy } from '../entities/Enemy';
 
-export type DamageKind = 'arrow' | 'shard' | 'dot' | 'aoe' | 'chain' | 'blade' | 'storm' | 'thorns' | 'execute';
+export type DamageKind = 'arrow' | 'slash' | 'shard' | 'dot' | 'aoe' | 'chain' | 'blade' | 'storm' | 'thorns' | 'execute';
 
 export type EnemyAttackKind = 'bite' | 'spit' | 'throw' | 'slam' | 'cast' | 'charge' | 'impact' | 'roar' | 'stomp';
 
 /** Every cross-system event in the game. UI and feedback (sound, shake, numbers) subscribe to these. */
 export interface GameEvents {
-  'weapon:fired': { x: number; z: number };
+  'weapon:fired': { x: number; z: number; weapon: 'bow' | 'sword' };
   'projectile:blocked': { x: number; z: number };
   'enemy:spawned': { enemy: Enemy };
   'enemy:attack': { enemy: Enemy; kind: EnemyAttackKind };

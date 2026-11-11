@@ -95,6 +95,11 @@ export abstract class Enemy {
     return this.def.boss;
   }
 
+  /** False while it can't be hit by melee (e.g. mid-leap). */
+  get touchable(): boolean {
+    return !this.intangible;
+  }
+
   /** Multiplies all damage taken (bosses shield themselves with this). */
   get damageTakenMul(): number {
     return 1;

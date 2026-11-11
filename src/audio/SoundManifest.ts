@@ -17,8 +17,11 @@ export interface SoundSpec {
 
 export const SOUNDS = {
   bow_shoot: { variants: 1, volume: 0.45, cooldown: 0.05, maxVoices: 3 }, // one fixed sound, no pitch jitter
+  sword_swing: { variants: 2, volume: 0.45, rate: [0.95, 1.07], cooldown: 0.08, maxVoices: 3 },
   arrow_hit: { variants: 1, volume: 0.32, rate: [0.96, 1.04], cooldown: 0.035, maxVoices: 4 },
   arrow_crit: { variants: 1, volume: 0.42, rate: [0.97, 1.03], cooldown: 0.06, maxVoices: 2 },
+  sword_hit: { variants: 2, volume: 0.5, rate: [0.94, 1.06], cooldown: 0.03, maxVoices: 4 },
+  sword_crit: { variants: 1, volume: 0.6, rate: [0.97, 1.03], cooldown: 0.06, maxVoices: 2 },
 
   boss_slam: { variants: 2, volume: 1, cooldown: 0.2, maxVoices: 2 },
   boss_impact: { variants: 1, volume: 1, cooldown: 0.3 },

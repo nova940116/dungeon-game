@@ -212,6 +212,60 @@
         }
       ]
     ],
+    "sword_swing": [
+      [
+        {
+          "pack": "medieval",
+          "file": "Katana Draw Fast.wav",
+          "start": 0.29,
+          "dur": 0.22,
+          "gain": -1,
+          "filter": "highpass=f=1200"
+        },
+        {
+          "pack": "medieval",
+          "file": "Katana Swing.wav",
+          "start": 7.94,
+          "dur": 0.3,
+          "gain": -2,
+          "filter": "highpass=f=140,equalizer=f=2800:t=q:w=1.2:g=9,equalizer=f=600:t=q:w=1:g=4"
+        },
+        {
+          "pack": "medieval",
+          "file": "Axe Swing.wav",
+          "start": 1.59,
+          "dur": 0.35,
+          "gain": -6,
+          "filter": "asetrate=30870,aresample=44100,highpass=f=60,lowpass=f=2500"
+        }
+      ],
+      [
+        {
+          "pack": "medieval",
+          "file": "Katana Draw Fast.wav",
+          "start": 0.29,
+          "dur": 0.22,
+          "gain": -1,
+          "filter": "highpass=f=1200"
+        },
+        {
+          "pack": "medieval",
+          "file": "Katana Swing.wav",
+          "start": 5.74,
+          "dur": 0.3,
+          "gain": -2,
+          "filter": "highpass=f=140,equalizer=f=2800:t=q:w=1.2:g=9,equalizer=f=600:t=q:w=1:g=4"
+        },
+        {
+          "pack": "medieval",
+          "file": "Axe Swing.wav",
+          "start": 5.95,
+          "dur": 0.35,
+          "gain": -6,
+          "filter": "asetrate=30870,aresample=44100,highpass=f=60,lowpass=f=2500"
+        }
+      ]
+    ],
     "arrow_hit": [
       [
         {
@@ -258,6 +312,130 @@
           "pack": "fleshHits",
           "file": "qubodupImpactMetal.flac",
           "dur": 0.25,
+          "gain": -8,
+          "filter": "highpass=f=1500"
+        }
+      ]
+    ],
+    "sword_hit": [
+      [
+        {
+          "pack": "medieval",
+          "file": "Dagger Draw Fast.wav",
+          "start": 0.575,
+          "dur": 0.09,
+          "filter": "highpass=f=1500"
+        },
+        {
+          "pack": "bassHits",
+          "file": "Impact 7.wav",
+          "start": 0.071,
+          "dur": 0.14,
+          "gain": -3,
+          "filter": "highpass=f=60"
+        },
+        {
+          "pack": "fleshHits",
+          "file": "qubodupImpactStone.flac",
+          "dur": 0.07,
+          "gain": -7,
+          "delay": 0.004,
+          "filter": "highpass=f=200"
+        },
+        {
+          "pack": "medieval",
+          "file": "Seax Draw Fast.wav",
+          "start": 0.48,
+          "dur": 0.14,
+          "gain": -10,
+          "delay": 0.01,
+          "fadeIn": 0.01,
+          "filter": "highpass=f=900"
+        }
+      ],
+      [
+        {
+          "pack": "medieval",
+          "file": "Dagger Draw Fast.wav",
+          "start": 1.965,
+          "dur": 0.09,
+          "filter": "highpass=f=1500"
+        },
+        {
+          "pack": "bassHits",
+          "file": "Impact 6.wav",
+          "start": 0.103,
+          "dur": 0.14,
+          "gain": -3,
+          "filter": "highpass=f=60"
+        },
+        {
+          "pack": "fleshHits",
+          "file": "qubodupImpactStone.flac",
+          "dur": 0.07,
+          "gain": -7,
+          "delay": 0.004,
+          "filter": "highpass=f=200"
+        },
+        {
+          "pack": "medieval",
+          "file": "Seax Draw Fast.wav",
+          "start": 0.48,
+          "dur": 0.14,
+          "gain": -10,
+          "delay": 0.01,
+          "fadeIn": 0.01,
+          "filter": "highpass=f=900"
+        }
+      ]
+    ],
+    "sword_crit": [
+      [
+        {
+          "pack": "medieval",
+          "file": "Dagger Draw Fast.wav",
+          "start": 0.575,
+          "dur": 0.09,
+          "filter": "highpass=f=1500"
+        },
+        {
+          "pack": "bassHits",
+          "file": "Impact 7.wav",
+          "start": 0.071,
+          "dur": 0.14,
+          "gain": -3,
+          "filter": "highpass=f=60"
+        },
+        {
+          "pack": "fleshHits",
+          "file": "qubodupImpactStone.flac",
+          "dur": 0.07,
+          "gain": -7,
+          "delay": 0.004,
+          "filter": "highpass=f=200"
+        },
+        {
+          "pack": "medieval",
+          "file": "Seax Draw Fast.wav",
+          "start": 0.48,
+          "dur": 0.14,
+          "gain": -10,
+          "delay": 0.01,
+          "fadeIn": 0.01,
+          "filter": "highpass=f=900"
+        },
+        {
+          "pack": "bassHits",
+          "file": "Impact 9.wav",
+          "start": 0.068,
+          "dur": 0.35,
+          "gain": -3,
+          "filter": "highpass=f=45"
+        },
+        {
+          "pack": "fleshHits",
+          "file": "qubodupImpactMetal.flac",
+          "dur": 0.3,
           "gain": -8,
           "filter": "highpass=f=1500"
         }

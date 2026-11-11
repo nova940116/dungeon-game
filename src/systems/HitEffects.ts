@@ -1,7 +1,16 @@
 import type { Enemy } from '../entities/Enemy';
-import type { Arrow } from '../entities/projectiles/Arrow';
+import { distance } from '../utils/math';
 import type { World } from '../game/World';
 import { rand } from '../utils/math';
+
+/** What struck: an arrow / sword wave, or a sword sweep. Direction is used for knockback and split shards. */
+export interface HitSource {
+  vx: number;
+  vz: number;
+  angle: number;
+  /** Minor hits (shards, spirit arrows, sweeps) never split. */
+  minor: boolean;
+}
 
 const BURN_TIME = 3;
 const POISON_TIME = 4;
@@ -12,8 +21,26 @@ const CHAIN_RANGE = 5;
 
 const COLORS = { fire: 0xff7a2a, frost: 0x8fd8ff, storm: 0xbfe4ff, venom: 0x86ff4a, blast: 0xffa040 } as const;
 
-/** Augment effects of an arrow hit: statuses, explosions, chain lightning, shards, knockback. */
-export function applyOnHit(world: World, enemy: Enemy, damage: number, arrow: Arrow, critical: boolean): void {
+/**
+ * One player hit on an enemy (arrow, sword wave or sword sweep): crit roll, damage bonuses,
+ * damage, then every on-hit augment effect.
+ */
+export function strike(world: World, enemy: Enemy, damageMul: number, source: HitSource, kind: 'arrow' | 'slash' | 'shard'): void {
+  const s = world.player.stats;
+  const critical = Math.random() < s.critChance;
+  let amount = s.damage * damageMul * (critical ? s.critMultiplier : 1) * rand(0.92, 1.08);
+  if (s.ambush > 0 && enemy.hp >= enemy.maxHp) amount *= 1 + s.ambush;
+  if (s.sniper > 0) {
+    const d = distance(world.player.x, world.player.z, enemy.x, enemy.z);
+    amount *= 1 + s.sniper * Math.min(1, Math.max(0, d - 3) / 6);
+  }
+  world.effects.hit(enemy.x, enemy.centerY, enemy.z, critical);
+  world.damageEnemy(enemy, amount, kind, critical);
+  applyOnHit(world, enemy, amount, source, critical);
+}
+
+/** Augment effects of a hit: statuses, explosions, chain lightning, shards, knockback. */
+export function applyOnHit(world: World, enemy: Enemy, damage: number, arrow: HitSource, critical: boolean): void {
   const s = world.player.stats;
   const st = enemy.status;
 

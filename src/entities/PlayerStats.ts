@@ -34,6 +34,17 @@ export interface PlayerStats {
   /** Max attack speed bonus gained by standing still for 3 s. */
   stillRamp: number;
 
+  // ---- swordsman
+  /** Reach and damage of the close-range sword sweep. */
+  meleeRangeMul: number;
+  meleeDamageMul: number;
+  /** Width of the sweep (multiplies its half-angle). */
+  meleeArcMul: number;
+  /** The third hit of the combo becomes a full spin. */
+  spinFinisher: boolean;
+  /** Archer "검을 뽑아라": swings the bow in melee instead of shooting. */
+  meleeMode: boolean;
+
   // ---- damage modifiers
   bossDamageMul: number;
   /** Bonus damage against enemies at full HP. */
@@ -137,6 +148,11 @@ export const createDefaultStats = (): PlayerStats => ({
   knockback: 0,
   fireWhileMoving: 0,
   stillRamp: 0,
+  meleeRangeMul: 1,
+  meleeDamageMul: 1,
+  meleeArcMul: 1,
+  spinFinisher: false,
+  meleeMode: false,
 
   bossDamageMul: 1,
   ambush: 0,

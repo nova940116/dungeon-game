@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { crescentGeometry } from '../assets/models/ProjectileModels';
 import { vfxTexture, type VfxTextureKey } from '../assets/vfxTextures';
 import { rand } from '../utils/math';
 
@@ -49,6 +50,16 @@ interface Decal {
 }
 
 const MAX_PARTICLES = 900;
+const SLASH_LIFE = 0.2;
+
+interface SlashArc {
+  mesh: THREE.Mesh;
+  material: THREE.MeshBasicMaterial;
+  life: number;
+  angle: number;
+  radius: number;
+  dir: number;
+}
 const DECAL_GEOMETRY = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
 
 /**
@@ -61,6 +72,9 @@ export class EffectsSystem {
   private readonly freeDecals: Decal[] = [];
   private readonly liveDecals: Decal[] = [];
   private created = 0;
+  private readonly freeArcs: SlashArc[] = [];
+  private readonly liveArcs: SlashArc[] = [];
+  private readonly arcGeometry = new Map<number, THREE.BufferGeometry>();
 
   constructor(private readonly scene: THREE.Scene) {}
 
@@ -128,6 +142,42 @@ export class EffectsSystem {
   /** One trail puff behind a moving projectile. */
   trail(x: number, y: number, z: number, color: number, size = 0.4): void {
     this.emit({ x, y, z, life: 0.2, size: [size, 0.04], color, intensity: 1.8, texture: 'glow' });
+  }
+
+  /**
+   * Sword sweep: a bright crescent that swings across `arc` radians in front of (x, z) and fades.
+   * `mirror` swings the other way (backhand).
+   */
+  slashArc(x: number, z: number, angle: number, radius: number, color: number, arc: number, mirror = false): void {
+    const key = Math.round(arc * 100);
+    let geometry = this.arcGeometry.get(key);
+    if (!geometry) {
+      geometry = crescentGeometry(0.8, 1, Math.min(arc, Math.PI * 2 - 0.01)); // thin edge: reads as a blade's path
+      this.arcGeometry.set(key, geometry);
+    }
+    let a = this.freeArcs.pop();
+    if (!a) {
+      const material = new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.renderOrder = 6;
+      this.scene.add(mesh);
+      a = { mesh, material, life: 0, angle: 0, radius: 1, dir: 1 };
+    }
+    a.mesh.geometry = geometry;
+    a.material.color.setHex(color).multiplyScalar(1.7);
+    a.mesh.position.set(x, 1.0, z);
+    a.mesh.visible = true;
+    a.life = SLASH_LIFE;
+    a.angle = angle;
+    a.radius = radius;
+    a.dir = mirror ? -1 : 1;
+    this.liveArcs.push(a);
+    // sparks thrown off the blade's path
+    for (let i = 0; i < 8; i++) {
+      const t = angle + (rand(-0.5, 0.5) * arc);
+      const r = radius * rand(0.6, 1);
+      this.emit({ x: x + Math.sin(t) * r, y: 1.0, z: z + Math.cos(t) * r, vx: Math.sin(t) * 3, vy: rand(0.5, 2), vz: Math.cos(t) * 3, life: rand(0.15, 0.3), size: [0.25, 0.04], color, intensity: 2.4, texture: 'star', drag: 3 });
+    }
   }
 
   /** Small dust puff left behind by a flying rock. */
@@ -259,6 +309,21 @@ export class EffectsSystem {
       p.material.rotation += p.spin * dt;
     }
 
+    for (let i = this.liveArcs.length - 1; i >= 0; i--) {
+      const a = this.liveArcs[i];
+      a.life -= dt;
+      if (a.life <= 0) {
+        a.mesh.visible = false;
+        this.freeArcs.push(a);
+        this.liveArcs.splice(i, 1);
+        continue;
+      }
+      const t = 1 - a.life / SLASH_LIFE;
+      a.mesh.rotation.y = a.angle + a.dir * (t - 0.5) * 0.7; // sweeps across
+      a.mesh.scale.setScalar(a.radius * (0.82 + 0.25 * t));
+      a.material.opacity = (1 - t) ** 1.4;
+    }
+
     for (let i = this.liveDecals.length - 1; i >= 0; i--) {
       const d = this.liveDecals[i];
       d.life -= dt;
@@ -277,6 +342,11 @@ export class EffectsSystem {
 
   clear(): void {
     while (this.live.length) this.release(this.live.length - 1);
+    for (const a of this.liveArcs) {
+      a.mesh.visible = false;
+      this.freeArcs.push(a);
+    }
+    this.liveArcs.length = 0;
     for (const d of this.liveDecals) {
       d.mesh.visible = false;
       this.freeDecals.push(d);

@@ -74,7 +74,7 @@ export class World {
     return enemy;
   }
 
-  spawnArrow(x: number, z: number, angle: number, opts?: ArrowOptions): Arrow {
+  spawnArrow(x: number, z: number, angle: number, opts: ArrowOptions = {}): Arrow {
     const arrow = new Arrow(x, z, angle, this.player.stats, opts);
     this.scene.add(arrow.mesh);
     this.arrows.push(arrow);
@@ -134,7 +134,7 @@ export class World {
     if (s.berserk > 0) amount *= 1 + s.berserk * 100 * (1 - this.player.hp / this.player.maxHp);
     amount = Math.max(1, Math.round(amount));
 
-    let killed = enemy.applyDamage(amount, kind === 'arrow');
+    let killed = enemy.applyDamage(amount, kind === 'arrow' || kind === 'slash');
     this.events.emit('enemy:damaged', { enemy, amount, critical, kind });
     if (s.lifestealOnHit > 0 && kind !== 'dot') this.healPlayer(amount * s.lifestealOnHit, true);
     if (!killed && !enemy.isBoss && s.executeThreshold > 0 && enemy.hp <= enemy.maxHp * s.executeThreshold) {

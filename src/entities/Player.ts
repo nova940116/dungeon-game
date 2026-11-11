@@ -4,6 +4,7 @@ import { AnimatedModel } from '../assets/AnimatedModel';
 import { HealthBar } from '../assets/models/HealthBar';
 import type { Room } from '../world/Room';
 import { clamp, dampAngle, shieldedRatios, type Vec2 } from '../utils/math';
+import { CLASSES, type PlayerClass } from '../data/classes';
 import { createDefaultStats, type PlayerStats } from './PlayerStats';
 
 const MOVE_THRESHOLD = 0.15;
@@ -13,9 +14,13 @@ const RELEASE_SHARE = 0.4;
 const MAX_ANIM_SPEED = 6;
 const MIN_DRAW_TIME = 0.12;
 
+/** Slash clips: how far into the clip the blade crosses the target (forehand / reversed backhand). */
+const SLASH_HIT = { attack: 0.4, punch: 0.6 } as const;
+
 export class Player {
   readonly radius = 0.42;
-  readonly model: AnimatedModel;
+  model: AnimatedModel;
+  cls: PlayerClass;
   readonly bar = new HealthBar(1.1, 0x4ade80);
 
   x = 0;
@@ -39,9 +44,36 @@ export class Player {
   private hurtFlash = 0;
   private moving = false;
 
-  constructor() {
-    // Bow, string and arrow are part of the model; the clips animate them (see scripts/blender/build_archer.py).
-    this.model = new AnimatedModel('player');
+  constructor(cls: PlayerClass = 'archer') {
+    // Archer: bow, string and arrow are part of the model (scripts/blender/build_archer.py).
+    // Swordsman: cape and greatsword are part of the model (scripts/blender/build_swordsman.py).
+    this.cls = cls;
+    this.model = new AnimatedModel(CLASSES[cls].model);
+  }
+
+  /** Swaps class (model + base stats). The caller re-adds `root` to the scene. Returns the old root. */
+  setClass(cls: PlayerClass): THREE.Group | null {
+    if (cls === this.cls) return null;
+    const old = this.model.root;
+    const { x, z, face } = this;
+    this.model.dispose();
+    this.cls = cls;
+    this.model = new AnimatedModel(CLASSES[cls].model);
+    this.root.position.set(x, 0, z);
+    this.root.rotation.y = face;
+    this.reset();
+    return old;
+  }
+
+  /**
+   * Swordsman: plays the forehand (even combo steps) or backhand slash so the blade crosses the
+   * target `hitDelay` seconds from now.
+   */
+  playSlash(step: number, hitDelay: number): void {
+    // The archer (after "검을 뽑아라") only has the one bow swing.
+    const clip = this.cls === 'archer' || step % 2 === 0 ? 'attack' : 'punch';
+    const hitAt = this.model.duration(clip) * SLASH_HIT[clip];
+    this.model.playOnce(clip, { fade: 0.04, timeScale: clamp(hitAt / hitDelay, 1, MAX_ANIM_SPEED) });
   }
 
   get root(): THREE.Group {
@@ -81,7 +113,8 @@ export class Player {
 
   reset(): void {
     this.stats = createDefaultStats();
-    this.hp = this.maxHp = BALANCE.playerBaseHp;
+    CLASSES[this.cls].stats(this.stats);
+    this.hp = this.maxHp = CLASSES[this.cls].maxHp;
     this.invulnerable = 0;
     this.shield = 0;
     this.slow = 0;
@@ -200,8 +233,10 @@ export class Player {
   update(dt: number, cameraRotation: THREE.Quaternion): void {
     if (this.alive) {
       const shooting = this.aiming && !this.moving;
-      this.model.setLoop(this.moving ? 'run' : shooting ? 'hold' : 'idle', 0.15, this.moving ? this.stats.moveSpeed / 6 : 1);
-      this.updateArchery();
+      const archer = this.cls === 'archer' && !this.stats.meleeMode;
+      const ready = archer && shooting ? 'hold' : 'idle';
+      this.model.setLoop(this.moving ? 'run' : ready, 0.15, this.moving ? this.stats.moveSpeed / 6 : 1);
+      if (archer) this.updateArchery();
       this.root.rotation.y = dampAngle(this.root.rotation.y, this.face, 18, dt);
     }
     this.model.update(dt);

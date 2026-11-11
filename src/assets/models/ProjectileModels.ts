@@ -36,6 +36,15 @@ export function createArrowMesh(glow = 0xffd890): THREE.Group {
   return root;
 }
 
+/**
+ * Crescent arc lying flat, convex side toward +Z, spanning `arc` radians: the shape of a sword
+ * slash. `RingGeometry` lives in XY; after rotating it flat, angle θ maps to (cos θ, 0, -sin θ),
+ * so +Z (forward) is θ = -π/2.
+ */
+export function crescentGeometry(inner: number, outer: number, arc: number): THREE.BufferGeometry {
+  return new THREE.RingGeometry(inner, outer, 28, 1, -Math.PI / 2 - arc / 2, arc).rotateX(-Math.PI / 2);
+}
+
 /** Red ground strip showing where a charge attack will go. Extends along +Z from its origin. */
 export function createTelegraphMesh(width: number, length: number): THREE.Mesh {
   const geo = new THREE.PlaneGeometry(width, length).translate(0, length / 2, 0).rotateX(Math.PI / 2);

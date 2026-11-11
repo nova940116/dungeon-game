@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { AUGMENTS, SETS, TIERS, augmentById } from '../src/data/augments';
+import { AUGMENTS, SETS, TIERS, augmentById, augmentText } from '../src/data/augments';
 import { EventBus } from '../src/engine/EventBus';
 import { createDefaultStats } from '../src/entities/PlayerStats';
 import type { Player } from '../src/entities/Player';
@@ -7,8 +7,9 @@ import type { GameEvents } from '../src/game/events';
 import { ProgressionSystem } from '../src/systems/ProgressionSystem';
 
 /** Minimal stand-in for Player (no Three.js needed). */
-function fakePlayer(): Player {
-  const fake: Pick<Player, 'hp' | 'maxHp' | 'stats' | 'heal' | 'increaseMaxHp' | 'scaleMaxHp'> = {
+function fakePlayer(cls: Player['cls'] = 'archer'): Player {
+  const fake: Pick<Player, 'cls' | 'hp' | 'maxHp' | 'stats' | 'heal' | 'increaseMaxHp' | 'scaleMaxHp'> = {
+    cls,
     hp: 100,
     maxHp: 100,
     stats: createDefaultStats(),
@@ -173,5 +174,55 @@ describe('ProgressionSystem', () => {
     p.choose(get('glassCannon'), player);
     expect(player.stats.damage).toBeCloseTo(damage * 1.7);
     expect(player.maxHp).toBe(65);
+  });
+
+  it('offers projectile augments only to ranged fighters and sword augments only to melee fighters', () => {
+    const offered = (player: Player, tier: 'gold' | 'prism') => {
+      const p = new ProgressionSystem(new EventBus<GameEvents>());
+      p.reset();
+      const seen = new Set<string>();
+      for (let i = 0; i < 400; i++) {
+        p.grantReward(tier);
+        for (const o of p.rollOffers(player)) seen.add(o.augment.id);
+        p.choose(get('sharpTip'), player); // consume the pending draft without changing the pool
+      }
+      return [...seen].map(get);
+    };
+    const sword = fakePlayer('swordsman');
+    for (const tier of ['gold', 'prism'] as const) {
+      const got = offered(sword, tier);
+      expect(got.some((a) => a.ranged)).toBe(false);
+      expect(got.some((a) => a.only === 'archer')).toBe(false);
+    }
+    expect(offered(sword, 'prism').some((a) => a.id === 'oneCut')).toBe(true);
+    const archer = fakePlayer('archer');
+    expect(offered(archer, 'prism').some((a) => a.melee)).toBe(false);
+    expect(offered(archer, 'prism').some((a) => a.id === 'drawSword')).toBe(true);
+    expect(augmentText(get('sharpTip'), 'swordsman').name).toBe('벼린 칼날');
+    expect(augmentText(get('sharpTip'), 'archer').name).toBe('날 선 화살촉');
+  });
+
+  it('has a reach augment in every tier for melee fighters', () => {
+    for (const tier of Object.keys(TIERS)) {
+      expect(AUGMENTS.some((a) => a.melee && a.tier === tier && a.description.includes('공격 사거리'))).toBe(true);
+    }
+  });
+
+  it('"검을 뽑아라" turns the archer into a melee fighter with much higher stats', () => {
+    const { p, player } = setup();
+    const before = { ...player.stats, maxHp: player.maxHp };
+    p.choose(get('drawSword'), player);
+    expect(player.stats.meleeMode).toBe(true);
+    expect(player.stats.damage).toBeCloseTo(before.damage * 2.4);
+    expect(player.maxHp).toBeGreaterThan(before.maxHp);
+    // from now on: no projectile augments, melee ones instead, and never the same augment again
+    for (let i = 0; i < 200; i++) {
+      p.grantReward('gold');
+      for (const o of p.rollOffers(player)) {
+        expect(o.augment.ranged).toBeFalsy();
+        expect(o.augment.id).not.toBe('drawSword');
+      }
+      p.choose(get('sharpTip'), player);
+    }
   });
 });

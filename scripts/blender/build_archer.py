@@ -673,6 +673,36 @@ make_clip('Bow_Release', 14, release)
 
 # ---------------------------------------------------------------- patch the source clips
 
+def mirror_clip(src_name, new_name):
+    """Bakes a left/right mirrored copy of a source clip (Blender's flipped pose paste, frame by frame)."""
+    src = bpy.data.actions[src_name]
+    start, end = (int(v) for v in src.frame_range)
+    new = bpy.data.actions.new(new_name)
+    new.use_fake_user = True
+    bpy.context.view_layer.objects.active = arm
+    bpy.ops.object.mode_set(mode='POSE')
+    for frame in range(start, end + 1):
+        arm.animation_data.action = src
+        scene.frame_set(frame)
+        bpy.ops.pose.select_all(action='SELECT')
+        bpy.ops.pose.copy()
+        arm.animation_data.action = new
+        bpy.ops.pose.paste(flipped=True)
+        for pb in pbones:
+            if pb.name in ('Bow', 'BowTop', 'BowBottom', 'Nock', 'Arrow'):
+                continue  # bow rig stays as patched below (gripped, no arrow)
+            pb.keyframe_insert('location', frame=frame - start)
+            pb.keyframe_insert('rotation_quaternion', frame=frame - start)
+            pb.keyframe_insert('scale', frame=frame - start)
+    bpy.ops.object.mode_set(mode='OBJECT')
+    arm.animation_data.action = None
+    print(f'clip {new_name}: mirrored from {src_name}, {end - start} frames')
+
+
+# Bow_Swing ("검을 뽑아라" augment): the sword slash mirrored, so the left (bow) hand swings the bow like a club.
+arm.animation_data_create()
+mirror_clip('CharacterArmature|Sword_Slash', 'Bow_Swing')
+
 KEEP = {'CharacterArmature|Run': 'Run', 'CharacterArmature|HitRecieve': 'HitRecieve', 'CharacterArmature|Death': 'Death'}
 for act in list(bpy.data.actions):
     if act.name in KEEP:
@@ -706,7 +736,7 @@ def fcurves_of(action):
 
 
 FIST = fist_local('L', [math.radians(70), math.radians(80), math.radians(55)])
-for name in KEEP.values():
+for name in [*KEEP.values(), 'Bow_Swing']:
     act = bpy.data.actions[name]
     arm.animation_data.action = act
     start, end = (int(v) for v in act.frame_range)
@@ -756,7 +786,7 @@ if RENDER_DIR:
         'bowhand': (Vector((0.45, -0.95, 1.55)), Vector((0.0, -0.5, 1.42))),
         'drawhand': (Vector((0.55, -0.55, 1.7)), Vector((-0.04, -0.12, 1.52))),
     }
-    shots = [(a, f) for a, fs in (('Bow_Idle', [0]), ('Bow_Draw', [0, 8, 15]), ('Bow_Hold', [0]), ('Bow_Release', [1, 3, 8, 14]), ('Run', [4])) for f in fs]
+    shots = [(a, f) for a, fs in (('Bow_Idle', [0]), ('Bow_Draw', [0, 8, 15]), ('Bow_Hold', [0]), ('Bow_Release', [1, 3, 8, 14]), ('Run', [4]), ('Bow_Swing', [4, 9, 14])) for f in fs]
     only = os.environ.get('SHOTS')
     for act_name, frame in shots:
         if only and act_name not in only.split(','):

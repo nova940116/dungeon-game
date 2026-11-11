@@ -5,7 +5,8 @@ import { CameraRig } from '../engine/CameraRig';
 import { Engine } from '../engine/Engine';
 import { EventBus } from '../engine/EventBus';
 import { Input } from '../engine/Input';
-import { SETS, TIERS } from '../data/augments';
+import { SETS, TIERS, augmentText, setName } from '../data/augments';
+import { CLASSES, type PlayerClass } from '../data/classes';
 import { moodForRoom } from '../data/themes';
 import type { BossEnemy } from '../entities/enemies/BossEnemy';
 import { Player } from '../entities/Player';
@@ -16,8 +17,8 @@ import { EffectsSystem } from '../systems/EffectsSystem';
 import { EnemySystem } from '../systems/EnemySystem';
 import { HazardSystem } from '../systems/HazardSystem';
 import { StatusSystem } from '../systems/HitEffects';
-import { ProgressionSystem, type AugmentOffer } from '../systems/ProgressionSystem';
-import { WeaponSystem } from '../systems/WeaponSystem';
+import { isMelee, ProgressionSystem, type AugmentOffer } from '../systems/ProgressionSystem';
+import { meleeReach, WeaponSystem } from '../systems/WeaponSystem';
 import { DamageNumbers } from '../ui/DamageNumbers';
 import { Hud } from '../ui/Hud';
 import { Screens } from '../ui/Screens';
@@ -97,7 +98,7 @@ export class Game {
       throw err;
     }
     this.engine.setEnvironment(assets.environment);
-    this.player = new Player();
+    this.player = new Player(this.savedClass);
     this.world = new World(this.engine.scene, this.player, this.events, this.effects);
     this.bindEvents();
 
@@ -161,7 +162,7 @@ export class Game {
 
   private showMenu(): void {
     this.state = 'menu';
-    this.screens.showMenu({ best: this.bestRoom, onStart: () => this.startRun() });
+    this.screens.showMenu({ best: this.bestRoom, onStart: () => this.showClassSelect() });
   }
 
   // ---------------------------------------------------------------- pause
@@ -208,6 +209,36 @@ export class Game {
     this.refreshHealth();
     this.loadRoom(1, false);
     this.showMenu();
+  }
+
+  private showClassSelect(): void {
+    this.screens.showClassSelect({
+      current: this.player.cls,
+      onPreview: (cls) => this.switchClass(cls),
+      onPick: (cls) => {
+        this.switchClass(cls);
+        storage.setString(STORAGE_KEYS.playerClass, cls);
+        this.startRun();
+      },
+      onBack: () => this.showMenu(),
+    });
+  }
+
+  /** Swaps the player's model + base stats (backdrop preview and run start). */
+  private switchClass(cls: PlayerClass): void {
+    const old = this.player.setClass(cls);
+    if (!old) return;
+    old.removeFromParent();
+    this.engine.scene.add(this.player.root);
+    this.player.placeAt(this.world.room.entrance);
+    this.effects.spawn(this.player.x, this.player.z, cls === 'swordsman' ? 0x6fb4ff : 0xffd890);
+    this.refreshHealth();
+    this.refreshBuild();
+  }
+
+  private get savedClass(): PlayerClass {
+    const saved = storage.getString(STORAGE_KEYS.playerClass);
+    return saved in CLASSES ? (saved as PlayerClass) : 'archer';
   }
 
   private startRun(): void {
@@ -293,6 +324,7 @@ export class Game {
     const reward = p.nextPick?.reward ? p.nextPick.minTier : null;
     this.screens.showAugmentPick({
       title: reward ? (reward === 'prism' ? '💎 보스 보상 — 전설' : '✨ 보스 보상 — 희귀') : '레벨 업! ✨',
+      cls: this.player.cls,
       offers: p.rollOffers(this.player),
       rerolls: p.rerolls,
       setInfo: (tag) => ({ have: p.tagCount(tag), need: SETS[tag].need }),
@@ -311,7 +343,7 @@ export class Game {
     this.refreshHealth();
     this.refreshBuild();
     if (granted.length) this.hud.toast(`🎲 ${granted.join(' · ')}`, 2.4);
-    else if (offer.augment.tier !== 'silver') this.hud.toast(`${TIERS[offer.augment.tier].label}: ${offer.augment.name}`, 1.4);
+    else if (offer.augment.tier !== 'silver') this.hud.toast(`${TIERS[offer.augment.tier].label}: ${augmentText(offer.augment, this.player.cls).name}`, 1.4);
     this.state = 'playing';
   }
 
@@ -338,7 +370,7 @@ export class Game {
     events.on('enemy:damaged', ({ enemy, amount, critical, kind }) => {
       const y = enemy.centerY + 0.4;
       if (kind === 'execute') return this.damageNumbers.spawn(enemy.x, y + 0.4, enemy.z, '처형!', 'crit');
-      if (kind === 'arrow') return this.damageNumbers.spawn(enemy.x, y, enemy.z, critical ? `${amount}!` : `${amount}`, critical ? 'crit' : 'normal');
+      if (kind === 'arrow' || kind === 'slash') return this.damageNumbers.spawn(enemy.x, y, enemy.z, critical ? `${amount}!` : `${amount}`, critical ? 'crit' : 'normal');
       this.damageNumbers.spawn(enemy.x, y - 0.3, enemy.z, `${amount}`, kind === 'dot' ? 'dot' : 'minor');
     });
     events.on('player:dodged', () => this.damageNumbers.spawn(player.x, 2, player.z, '회피', 'dodge'));
@@ -349,7 +381,7 @@ export class Game {
     });
     events.on('augment:set', ({ tag }) => {
       const set = SETS[tag];
-      this.hud.toast(`${set.icon} ${set.name} 시너지 발동! ${set.bonus}`, 2.8);
+      this.hud.toast(`${set.icon} ${setName(tag, this.player.cls)} 시너지 발동! ${set.bonus}`, 2.8);
       this.refreshBuild();
     });
     events.on('enemy:spawned', ({ enemy }) => enemy.isBoss && this.beginBossFight(enemy));
@@ -399,10 +431,11 @@ export class Game {
   private refreshBuild(): void {
     const s = this.player.stats;
     const arrowsPerVolley = s.frontArrows + s.diagonalPairs * 2 + (s.sideArrows ? 2 : 0) + (s.backArrow ? 1 : 0);
+    const cls = this.player.cls;
     this.hud.setBuild(
-      { damage: s.damage, attacksPerSecond: s.volleys / s.attackInterval, critChance: s.critChance, arrowsPerVolley },
-      this.progression.owned().map(({ augment, stacks }) => ({ ...augment, stacks })),
-      this.progression.sets().map((p) => ({ ...p, icon: SETS[p.tag].icon, name: SETS[p.tag].name, bonus: SETS[p.tag].bonus })),
+      { damage: s.damage, attacksPerSecond: s.volleys / s.attackInterval, critChance: s.critChance, arrowsPerVolley, reach: isMelee(this.player) ? meleeReach(s) : undefined },
+      this.progression.owned().map(({ augment, stacks }) => ({ ...augment, ...augmentText(augment, cls), stacks })),
+      this.progression.sets().map((p) => ({ ...p, icon: SETS[p.tag].icon, name: setName(p.tag, cls), bonus: SETS[p.tag].bonus })),
     );
   }
 

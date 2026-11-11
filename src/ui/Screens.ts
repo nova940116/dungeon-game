@@ -1,4 +1,5 @@
-import { SETS, TIERS, type TagId } from '../data/augments';
+import { SETS, TIERS, augmentText, setName, type TagId } from '../data/augments';
+import { CLASSES, type PlayerClass } from '../data/classes';
 import type { AugmentOffer } from '../systems/ProgressionSystem';
 import { h, requireElement } from './dom';
 
@@ -53,7 +54,7 @@ export class Screens {
       'div',
       { className: 'panel' },
       h('h1', { className: 'panel__logo' }, '화살 던전'),
-      h('p', {}, '멈춰 서면 가장 가까운 적에게 ', h('b', {}, '자동으로 활을 쏩니다.'), h('br'), '움직이는 동안에는 공격하지 않아요 — 피하고, 멈추고, 쏘세요!'),
+      h('p', {}, '멈춰 서면 가까운 적을 ', h('b', {}, '자동으로 공격합니다.'), h('br'), '움직이는 동안에는 공격하지 않아요 — 피하고, 멈추고, 몰아치세요!'),
       h('p', {}, '이동: ', kbd('WASD'), ' / ', kbd('방향키'), ' · 모바일은 화면을 드래그'),
       h('p', {}, '방을 정리하면 위쪽 문이 열립니다. 레벨 업마다 증강을 고르고, 보스를 잡으면 희귀·전설 증강 보상!'),
       opts.best > 0 && h('p', {}, `최고 기록: 방 ${opts.best}`),
@@ -62,9 +63,65 @@ export class Screens {
     this.open(panel, (e) => isConfirmKey(e) && start());
   }
 
+  /** Class select: archer or swordsman. `onPreview` swaps the backdrop character while choosing. */
+  showClassSelect(opts: { current: PlayerClass; onPreview: (cls: PlayerClass) => void; onPick: (cls: PlayerClass) => void; onBack: () => void }): void {
+    const ids = Object.keys(CLASSES) as PlayerClass[];
+    let selected = opts.current;
+    let done = false;
+    const pick = (cls: PlayerClass) => {
+      if (done) return;
+      done = true;
+      this.soundHook('select');
+      opts.onPick(cls);
+    };
+    const select = (cls: PlayerClass) => {
+      if (cls === selected) return;
+      selected = cls;
+      for (const el of this.root.querySelectorAll<HTMLElement>('.class-card')) el.classList.toggle('is-selected', el.dataset.cls === cls);
+      opts.onPreview(cls);
+    };
+    const cards = ids.map((id, i) => {
+      const c = CLASSES[id];
+      const card = h(
+        'button',
+        { className: `card class-card class-card--${id}${id === selected ? ' is-selected' : ''}`, onClick: () => (selected === id ? pick(id) : select(id)), attrs: { 'data-cls': id, 'aria-label': `${i + 1}번: ${c.name}. ${c.description}` } },
+        h('div', { className: 'card__icon' }, c.icon),
+        h('b', { className: 'card__name' }, c.name),
+        h('em', { className: 'class-card__tagline' }, c.tagline),
+        h('small', { className: 'card__desc' }, c.description),
+        h(
+          'div',
+          { className: 'class-card__ratings' },
+          ...c.ratings.map(([label, value]) =>
+            h('span', { className: 'rating' }, h('span', { className: 'rating__label' }, label), h('span', { className: 'rating__pips' }, ...Array.from({ length: 5 }, (_, k) => h('i', { className: k < value ? 'is-on' : '' })))),
+          ),
+        ),
+        h('span', { className: 'class-card__go' }, '선택하기'),
+      );
+      card.addEventListener('pointerenter', () => select(id));
+      card.addEventListener('focus', () => select(id));
+      return card;
+    });
+    const panel = h(
+      'div',
+      { className: 'panel panel--draft' },
+      h('h2', { className: 'panel__title' }, '직업 선택'),
+      h('p', {}, '어떤 영웅으로 던전에 들어갈까요? ', kbd('1'), ' ', kbd('2'), ' · ', kbd('Enter'), ' 시작'),
+      h('div', { className: 'cards' }, ...cards),
+      h('button', { className: 'btn btn--ghost', onClick: this.withSound('click', opts.onBack) }, '뒤로'),
+    );
+    this.open(panel, (e) => {
+      const index = ['Digit1', 'Digit2'].indexOf(e.code);
+      if (index >= 0 && ids[index]) return select(ids[index]);
+      if (isConfirmKey(e)) pick(selected);
+      if (e.code === 'Escape') opts.onBack();
+    });
+  }
+
   /** Level-up / boss-reward draft: three augment cards, each can be rerolled while rerolls last. */
   showAugmentPick(opts: {
     title: string;
+    cls: PlayerClass;
     offers: AugmentOffer[];
     rerolls: number;
     setInfo: (tag: TagId) => { have: number; need: number };
@@ -89,8 +146,9 @@ export class Screens {
 
     const card = (offer: AugmentOffer, index: number, fresh: boolean) => {
       const a = offer.augment;
+      const text = augmentText(a, opts.cls);
       const tags = a.tags.map((tag) => {
-        const set = SETS[tag];
+        const set = { ...SETS[tag], name: setName(tag, opts.cls) };
         const { have, need } = opts.setInfo(tag);
         const owned = offer.stacks > 0;
         const after = owned ? have : have + 1;
@@ -107,11 +165,11 @@ export class Screens {
         { className: 'card-slot' },
         h(
           'button',
-          { className: `card card--${a.tier}${fresh ? ' is-fresh' : ''}`, onClick: () => pick(offer), attrs: { 'aria-label': `${index + 1}번: ${TIERS[a.tier].label} ${a.name}. ${a.description}` } },
+          { className: `card card--${a.tier}${fresh ? ' is-fresh' : ''}`, onClick: () => pick(offer), attrs: { 'aria-label': `${index + 1}번: ${TIERS[a.tier].label} ${text.name}. ${text.description}` } },
           h('span', { className: 'card__tier' }, TIERS[a.tier].label),
           h('div', { className: 'card__icon' }, a.icon),
-          h('b', { className: 'card__name' }, a.name),
-          h('small', { className: 'card__desc' }, a.description),
+          h('b', { className: 'card__name' }, text.name),
+          h('small', { className: 'card__desc' }, text.description),
           tags.length > 0 && h('div', { className: 'card__tags' }, ...tags),
           offer.stacks > 0 && h('em', { className: 'card__stacks' }, `보유 ${offer.stacks}${a.maxStacks < 99 ? ` / ${a.maxStacks}` : ''}`),
         ),

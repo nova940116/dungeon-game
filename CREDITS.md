@@ -48,12 +48,32 @@ The boss and summon models (`models/characters/boss_*.glb`, `enemy_spiderling.gl
 | `env/sky.hdr` | [Kloofendal 48d Partly Cloudy (Pure Sky)](https://polyhaven.com/a/kloofendal_48d_partly_cloudy_puresky) | Greg Zaal, Jarod Guest | CC0 1.0 |
 | `audio/bow_shoot_1.mp3` | [Medieval sound effects - Weapon Textures — Scythian Recurve Shoot.wav](https://opengameart.org/content/medieval-sound-effects-weapon-textures) | MedicineStorm | CC0 1.0 |
 | `audio/bow_shoot_1.mp3` | [Medieval sound effects - Weapon Textures — Scythian Recurve Arrow Pass.wav](https://opengameart.org/content/medieval-sound-effects-weapon-textures) | MedicineStorm | CC0 1.0 |
+| `audio/sword_swing_1.mp3` | [Medieval sound effects - Weapon Textures — Katana Draw Fast.wav](https://opengameart.org/content/medieval-sound-effects-weapon-textures) | MedicineStorm | CC0 1.0 |
+| `audio/sword_swing_1.mp3` | [Medieval sound effects - Weapon Textures — Katana Swing.wav](https://opengameart.org/content/medieval-sound-effects-weapon-textures) | MedicineStorm | CC0 1.0 |
+| `audio/sword_swing_1.mp3` | [Medieval sound effects - Weapon Textures — Axe Swing.wav](https://opengameart.org/content/medieval-sound-effects-weapon-textures) | MedicineStorm | CC0 1.0 |
+| `audio/sword_swing_2.mp3` | [Medieval sound effects - Weapon Textures — Katana Draw Fast.wav](https://opengameart.org/content/medieval-sound-effects-weapon-textures) | MedicineStorm | CC0 1.0 |
+| `audio/sword_swing_2.mp3` | [Medieval sound effects - Weapon Textures — Katana Swing.wav](https://opengameart.org/content/medieval-sound-effects-weapon-textures) | MedicineStorm | CC0 1.0 |
+| `audio/sword_swing_2.mp3` | [Medieval sound effects - Weapon Textures — Axe Swing.wav](https://opengameart.org/content/medieval-sound-effects-weapon-textures) | MedicineStorm | CC0 1.0 |
 | `audio/arrow_hit_1.mp3` | [Impact — qubodupImpactStone.flac](https://opengameart.org/content/impact) | qubodup | CC0 1.0 |
 | `audio/arrow_hit_1.mp3` | [Impacts/Gun/sfx — Impact 7.wav](https://opengameart.org/content/impactsgunsfx) | Eldritch Grim | CC0 1.0 |
 | `audio/arrow_crit_1.mp3` | [Impact — qubodupImpactStone.flac](https://opengameart.org/content/impact) | qubodup | CC0 1.0 |
 | `audio/arrow_crit_1.mp3` | [Impacts/Gun/sfx — Impact 7.wav](https://opengameart.org/content/impactsgunsfx) | Eldritch Grim | CC0 1.0 |
 | `audio/arrow_crit_1.mp3` | [Impacts/Gun/sfx — Impact 9.wav](https://opengameart.org/content/impactsgunsfx) | Eldritch Grim | CC0 1.0 |
 | `audio/arrow_crit_1.mp3` | [Impact — qubodupImpactMetal.flac](https://opengameart.org/content/impact) | qubodup | CC0 1.0 |
+| `audio/sword_hit_1.mp3` | [Medieval sound effects - Weapon Textures — Dagger Draw Fast.wav](https://opengameart.org/content/medieval-sound-effects-weapon-textures) | MedicineStorm | CC0 1.0 |
+| `audio/sword_hit_1.mp3` | [Impacts/Gun/sfx — Impact 7.wav](https://opengameart.org/content/impactsgunsfx) | Eldritch Grim | CC0 1.0 |
+| `audio/sword_hit_1.mp3` | [Impact — qubodupImpactStone.flac](https://opengameart.org/content/impact) | qubodup | CC0 1.0 |
+| `audio/sword_hit_1.mp3` | [Medieval sound effects - Weapon Textures — Seax Draw Fast.wav](https://opengameart.org/content/medieval-sound-effects-weapon-textures) | MedicineStorm | CC0 1.0 |
+| `audio/sword_hit_2.mp3` | [Medieval sound effects - Weapon Textures — Dagger Draw Fast.wav](https://opengameart.org/content/medieval-sound-effects-weapon-textures) | MedicineStorm | CC0 1.0 |
+| `audio/sword_hit_2.mp3` | [Impacts/Gun/sfx — Impact 6.wav](https://opengameart.org/content/impactsgunsfx) | Eldritch Grim | CC0 1.0 |
+| `audio/sword_hit_2.mp3` | [Impact — qubodupImpactStone.flac](https://opengameart.org/content/impact) | qubodup | CC0 1.0 |
+| `audio/sword_hit_2.mp3` | [Medieval sound effects - Weapon Textures — Seax Draw Fast.wav](https://opengameart.org/content/medieval-sound-effects-weapon-textures) | MedicineStorm | CC0 1.0 |
+| `audio/sword_crit_1.mp3` | [Medieval sound effects - Weapon Textures — Dagger Draw Fast.wav](https://opengameart.org/content/medieval-sound-effects-weapon-textures) | MedicineStorm | CC0 1.0 |
+| `audio/sword_crit_1.mp3` | [Impacts/Gun/sfx — Impact 7.wav](https://opengameart.org/content/impactsgunsfx) | Eldritch Grim | CC0 1.0 |
+| `audio/sword_crit_1.mp3` | [Impact — qubodupImpactStone.flac](https://opengameart.org/content/impact) | qubodup | CC0 1.0 |
+| `audio/sword_crit_1.mp3` | [Medieval sound effects - Weapon Textures — Seax Draw Fast.wav](https://opengameart.org/content/medieval-sound-effects-weapon-textures) | MedicineStorm | CC0 1.0 |
+| `audio/sword_crit_1.mp3` | [Impacts/Gun/sfx — Impact 9.wav](https://opengameart.org/content/impactsgunsfx) | Eldritch Grim | CC0 1.0 |
+| `audio/sword_crit_1.mp3` | [Impact — qubodupImpactMetal.flac](https://opengameart.org/content/impact) | qubodup | CC0 1.0 |
 | `audio/boss_slam_1.mp3` | [Impacts/Gun/sfx — Impact 14.wav](https://opengameart.org/content/impactsgunsfx) | Eldritch Grim | CC0 1.0 |
 | `audio/boss_slam_1.mp3` | [Explosions — explosion3.ogg](https://opengameart.org/content/explosions-4) | EZduzziteh | CC0 1.0 |
 | `audio/boss_slam_2.mp3` | [Impacts/Gun/sfx — Impact 12.wav](https://opengameart.org/content/impactsgunsfx) | Eldritch Grim | CC0 1.0 |

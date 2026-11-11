@@ -1,6 +1,6 @@
 import { BALANCE } from '../config';
 import type { EventBus } from '../engine/EventBus';
-import { AUGMENTS, SETS, TIERS, type AugmentContext, type AugmentDef, type TagId, type Tier } from '../data/augments';
+import { AUGMENTS, SETS, TIERS, augmentText, type AugmentContext, type AugmentDef, type TagId, type Tier } from '../data/augments';
 import type { Player } from '../entities/Player';
 import type { GameEvents } from '../game/events';
 
@@ -24,6 +24,9 @@ export interface SetProgress {
 }
 
 const STARTING_REROLLS = 2;
+
+/** Fights in melee: the swordsman, or an archer who took "검을 뽑아라". */
+export const isMelee = (player: Player): boolean => player.cls === 'swordsman' || player.stats.meleeMode;
 const OFFER_COUNT = 3;
 
 /** XP, levels and the augment draft (tiers, rerolls, synergy sets). */
@@ -155,7 +158,7 @@ export class ProgressionSystem {
           const pick = pool[Math.floor(this.random() * pool.length)];
           picked.add(pick.id);
           this.take(pick, player);
-          names.push(pick.name);
+          names.push(augmentText(pick, player.cls).name);
         }
         granted.push(...names);
         return names;
@@ -181,6 +184,9 @@ export class ProgressionSystem {
       (a) =>
         (exact ? a.tier === tier : TIERS[a.tier].rank >= TIERS[tier].rank) &&
         this.stacksOf(a.id) < a.maxStacks &&
+        (!a.only || a.only === player.cls) &&
+        (a.ranged ? !isMelee(player) : true) &&
+        (a.melee ? isMelee(player) : true) &&
         (a.isAvailable?.(player) ?? true),
     );
   }
