@@ -102,7 +102,7 @@ export class Game {
     this.world = new World(this.engine.scene, this.player, this.events, this.effects);
     this.bindEvents();
 
-    this.loadRoom(1, false); // backdrop behind the title screen
+    this.loadRoom(1, false);
     this.showMenu();
     this.engine.start((dt, elapsed) => this.update(dt, elapsed));
   }
@@ -160,8 +160,14 @@ export class Game {
 
   // ---------------------------------------------------------------- flow
 
+  /** Title + class select stand on their own: the game view stays hidden until a run starts. */
+  private setTitleMode(on: boolean): void {
+    document.body.classList.toggle('is-title', on);
+  }
+
   private showMenu(): void {
     this.state = 'menu';
+    this.setTitleMode(true);
     this.screens.showMenu({ best: this.bestRoom, onStart: () => this.showClassSelect() });
   }
 
@@ -212,10 +218,10 @@ export class Game {
   }
 
   private showClassSelect(): void {
+    this.setTitleMode(true);
     this.screens.showClassSelect({
       current: this.player.cls,
-      onPreview: (cls) => this.switchClass(cls),
-      onPick: (cls) => {
+      onStart: (cls) => {
         this.switchClass(cls);
         storage.setString(STORAGE_KEYS.playerClass, cls);
         this.startRun();
@@ -242,6 +248,7 @@ export class Game {
   }
 
   private startRun(): void {
+    this.setTitleMode(false);
     this.screens.hide();
     this.damageNumbers.clear();
     this.effects.clear();

@@ -8,6 +8,14 @@ export type UiSound = 'click' | 'select';
 
 const isConfirmKey = (e: KeyboardEvent) => e.code === 'Enter' || e.code === 'Space';
 
+/** "궁수로" / "검사로" / "기사로" / "전사로", but "궁병으로": picks 로/으로 from the last syllable's final consonant (ㄹ takes 로). */
+const withRo = (word: string): string => {
+  const code = word.charCodeAt(word.length - 1) - 0xac00;
+  const final = code >= 0 && code < 11172 ? code % 28 : 0;
+  return `${word}${final === 0 || final === 8 ? '로' : '으로'}`;
+};
+const startLabel = (cls: PlayerClass) => `${withRo(CLASSES[cls].name)} 게임 시작`;
+
 /** Full-screen modal panels: title menu, level-up skill draft, game over. */
 export class Screens {
   private keyHandler: KeyHandler | null = null;
@@ -63,28 +71,38 @@ export class Screens {
     this.open(panel, (e) => isConfirmKey(e) && start());
   }
 
-  /** Class select: archer or swordsman. `onPreview` swaps the backdrop character while choosing. */
-  showClassSelect(opts: { current: PlayerClass; onPreview: (cls: PlayerClass) => void; onPick: (cls: PlayerClass) => void; onBack: () => void }): void {
+  /** Class select: pick archer or swordsman, then press "게임 시작". */
+  showClassSelect(opts: { current: PlayerClass; onStart: (cls: PlayerClass) => void; onBack: () => void }): void {
     const ids = Object.keys(CLASSES) as PlayerClass[];
     let selected = opts.current;
     let done = false;
-    const pick = (cls: PlayerClass) => {
+    const start = () => {
       if (done) return;
       done = true;
       this.soundHook('select');
-      opts.onPick(cls);
+      opts.onStart(selected);
     };
     const select = (cls: PlayerClass) => {
       if (cls === selected) return;
       selected = cls;
-      for (const el of this.root.querySelectorAll<HTMLElement>('.class-card')) el.classList.toggle('is-selected', el.dataset.cls === cls);
-      opts.onPreview(cls);
+      this.soundHook('click');
+      for (const el of this.root.querySelectorAll<HTMLElement>('.class-card')) {
+        const on = el.dataset.cls === cls;
+        el.classList.toggle('is-selected', on);
+        el.setAttribute('aria-pressed', String(on));
+      }
+      const startBtn = this.root.querySelector('.class-start');
+      if (startBtn) startBtn.textContent = startLabel(cls);
     };
     const cards = ids.map((id, i) => {
       const c = CLASSES[id];
       const card = h(
         'button',
-        { className: `card class-card class-card--${id}${id === selected ? ' is-selected' : ''}`, onClick: () => (selected === id ? pick(id) : select(id)), attrs: { 'data-cls': id, 'aria-label': `${i + 1}번: ${c.name}. ${c.description}` } },
+        {
+          className: `card class-card class-card--${id}${id === selected ? ' is-selected' : ''}`,
+          onClick: () => select(id),
+          attrs: { 'data-cls': id, 'aria-pressed': String(id === selected), 'aria-label': `${i + 1}번: ${c.name}. ${c.description}` },
+        },
         h('div', { className: 'card__icon' }, c.icon),
         h('b', { className: 'card__name' }, c.name),
         h('em', { className: 'class-card__tagline' }, c.tagline),
@@ -96,9 +114,8 @@ export class Screens {
             h('span', { className: 'rating' }, h('span', { className: 'rating__label' }, label), h('span', { className: 'rating__pips' }, ...Array.from({ length: 5 }, (_, k) => h('i', { className: k < value ? 'is-on' : '' })))),
           ),
         ),
-        h('span', { className: 'class-card__go' }, '선택하기'),
+        h('span', { className: 'class-card__go' }, '✓ 선택됨'),
       );
-      card.addEventListener('pointerenter', () => select(id));
       card.addEventListener('focus', () => select(id));
       return card;
     });
@@ -106,14 +123,18 @@ export class Screens {
       'div',
       { className: 'panel panel--draft' },
       h('h2', { className: 'panel__title' }, '직업 선택'),
-      h('p', {}, '어떤 영웅으로 던전에 들어갈까요? ', kbd('1'), ' ', kbd('2'), ' · ', kbd('Enter'), ' 시작'),
+      h('p', {}, '어떤 영웅으로 던전에 들어갈까요? ', kbd('1'), ' ', kbd('2'), ' 선택 · ', kbd('Enter'), ' 게임 시작'),
       h('div', { className: 'cards' }, ...cards),
-      h('button', { className: 'btn btn--ghost', onClick: this.withSound('click', opts.onBack) }, '뒤로'),
+      h('button', { className: 'btn class-start', onClick: start }, startLabel(selected)),
+      h('div', {}, h('button', { className: 'btn btn--ghost', onClick: this.withSound('click', opts.onBack) }, '뒤로')),
     );
     this.open(panel, (e) => {
       const index = ['Digit1', 'Digit2'].indexOf(e.code);
       if (index >= 0 && ids[index]) return select(ids[index]);
-      if (isConfirmKey(e)) pick(selected);
+      if (isConfirmKey(e)) {
+        e.preventDefault(); // Space/Enter would otherwise also "click" the focused card
+        start();
+      }
       if (e.code === 'Escape') opts.onBack();
     });
   }

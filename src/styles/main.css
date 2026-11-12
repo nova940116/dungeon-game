@@ -358,6 +358,16 @@ canvas {
 .screen.is-hidden {
   display: none;
 }
+/* Title + class select: only the menu is shown; the game view and HUD appear when a run starts. */
+body.is-title > :not(.screen) {
+  visibility: hidden;
+}
+body.is-title .screen {
+  background: radial-gradient(ellipse at 50% 30%, #24304a 0%, #141a26 55%, #0a0d14 100%);
+}
+.class-start {
+  min-width: 260px;
+}
 .panel {
   width: 100%;
   max-width: 560px;
