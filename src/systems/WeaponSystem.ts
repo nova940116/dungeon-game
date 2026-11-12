@@ -21,14 +21,16 @@ const MELEE_RANGE = 3.0;
 const ENGAGE_MARGIN = 0.9;
 /** Half-angle of the frontal sweep. */
 const MELEE_ARC = (78 * Math.PI) / 180;
-/** Seconds from the start of a swing to the blade crossing in front. */
-const SLASH_HIT = 0.16;
+/** Seconds from the start of a swing to the blade crossing in front, per combo step (the finisher winds up longer). */
+const SLASH_HIT = [0.2, 0.2, 0.28] as const;
 /** The combo restarts after this long without a swing. */
 const COMBO_RESET = 1.6;
 const MELEE_DAMAGE = 1.8;
 /** Third hit of the combo. */
 const FINISHER = 1.6;
-const SLASH_COLOR = { swordsman: 0x6fb4ff, archer: 0xffc04a } as const;
+const SLASH_COLOR = { swordsman: 0xc9d2e0, archer: 0xffc04a } as const;
+/** How far in front the greatsword lands on the finisher (share of the reach): shockwave + dust there. */
+const SMASH_AT = 0.55;
 
 /** Blade reach (world units) with every augment applied. */
 export const meleeReach = (s: PlayerStats): number => MELEE_RANGE * s.meleeRangeMul * (0.75 + 0.25 * s.arrowScale);
@@ -140,9 +142,10 @@ export class WeaponSystem {
     const step = this.combo;
     this.combo = (this.combo + 1) % 3;
     this.sinceSwing = 0;
-    player.playSlash(step, SLASH_HIT);
+    const hitDelay = SLASH_HIT[step];
+    player.playSlash(step, hitDelay);
     world.events.emit('weapon:fired', { x: player.x, z: player.z, weapon: 'sword' });
-    this.queue.push({ delay: SLASH_HIT, run: () => this.slashHit(world, angle, step) });
+    this.queue.push({ delay: hitDelay, run: () => this.slashHit(world, angle, step) });
   }
 
   private slashHit(world: World, angle: number, step: number): void {
@@ -155,7 +158,16 @@ export class WeaponSystem {
     const halfArc = spin ? Math.PI : Math.min(Math.PI, MELEE_ARC * s.meleeArcMul * (finisher ? 1.2 : 1));
     const power = finisher ? FINISHER : 1;
     world.effects.slashArc(player.x, player.z, angle, reach, SLASH_COLOR[player.cls], halfArc * 2, step % 2 === 1);
-    if (finisher) world.events.emit('camera:shake', { intensity: spin ? 0.2 : 0.12 });
+    if (finisher) {
+      world.events.emit('camera:shake', { intensity: spin ? 0.24 : 0.18 });
+      if (player.cls === 'swordsman' && !spin) {
+        // The greatsword hits the ground: shockwave and dust where it lands.
+        const x = player.x + Math.sin(angle) * reach * SMASH_AT;
+        const z = player.z + Math.cos(angle) * reach * SMASH_AT;
+        world.effects.shockwave(x, z, reach * 0.45, 0xc8b8a0);
+        for (let i = 0; i < 4; i++) world.effects.dust(x + (Math.random() - 0.5) * 0.8, z + (Math.random() - 0.5) * 0.8, 0x8a7a64);
+      }
+    }
 
     const source = { vx: Math.sin(angle), vz: Math.cos(angle), angle, minor: true };
     for (const e of [...world.enemies]) {

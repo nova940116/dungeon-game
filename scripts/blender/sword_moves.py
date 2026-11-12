@@ -1,25 +1,29 @@
 """
-Hand-authored swordsman clips on the Quaternius "CharacterArmature" rig (the hero rig the knight is built on):
+Hand-authored greatsword clips on the Quaternius "CharacterArmature" rig (the hero rig the warrior is built on):
 
-  Run          sword run: forward lean, real flight phase, knee drive and heel kick, hips and shoulders
-               counter-rotating, the free arm pumping, the sword carried low and trailing behind
-  Slash        forehand (right → left): wind-up over the right shoulder, hips lead, step in with the left foot,
-               blade flat and level through the target, follow-through low on the left
-  Slash_Back   backhand (left → right): load up on the left, uncoil, step with the right foot
-  Slash_Heavy  overhead finisher: rise onto the toes with the blade raised behind the head, drive down into
-               a deep lunge, the blade chops through and ends low in front
+  Idle         wide stance, the greatsword resting on the right shoulder, point high behind; slow heavy breathing
+  Run          charging run: deep forward lean, real flight phase, knee drive and heel kick, hips and shoulders
+               counter-rotating, the free arm pumping, the sword dragged one-handed behind, point near the ground
+  Slash        two-handed horizontal sweep, right → left: coil far back over the right shoulder, hips lead,
+               big step in with the left foot, blade flat and level through the target, momentum carries it
+               around behind on the left, then it comes back up to the shoulder
+  Slash_Back   the reverse sweep, left → right, stepping in with the right foot
+  Slash_Heavy  crouch, leap with the blade raised behind the back, then smash it down into the ground in a deep
+               landing crouch, hold the impact, lift it back to the shoulder
 
 Poses are written as targets, not joint angles:
   spine   {bone: (rx, ry, rz)} in character axes, relative to the parent (bosskit convention:
           rx > 0 bows forward, ry > 0 rolls toward the character's left, rz > 0 yaws to its left)
-  body    (dx, dy, dz) offset of the Body bone (bob, weight shift)
+  body    (dx, dy, dz) offset of the Body bone (bob, weight shift, jump)
   feet    {'L'|'R': (x, y, z, pitch)} ankle position and toe pitch (pitch > 0 = toe down, heel up)
   hands   {'R': dict(at=(x, y, z), blade=(dx, dy, dz), flat=(nx, ny, nz), elbow=(dx, dy, dz)),
-           'L': dict(at=…, elbow=…)}  wrist position, blade direction, blade flat normal, elbow pole
-Legs and arms are solved with two-bone IK, so feet stay planted and the blade follows the authored path.
+           'L': dict(at=…, elbow=…, grip=distance down the handle, on_grip=0…1)}  on_grip blends the left
+          hand from its free position onto the handle (two-handed grip)
+Legs and arms are solved with two-bone IK; between key poses the targets are splined and solved every frame,
+so the blade follows the authored path exactly and the feet stay planted.
 
 World space (Blender): +Z up, the character faces -Y, its left is +X (its sword hand is on -X).
-The slashes start and end on the first frame of Idle so they blend in and out seamlessly.
+The one-shot clips ease in from and out to the first frame of Idle.
 """
 import math
 
@@ -31,7 +35,7 @@ SPINE = ['Body', 'Hips', 'Abdomen', 'Torso', 'Chest', 'Neck', 'Head']
 FINGER_PREFIXES = ('Index', 'Middle', 'Ring', 'Pinky', 'Thumb')
 
 # Where the blade crosses the target, as a share of each clip (read by the game: src/entities/Player.ts).
-HIT = {'Slash': 10 / 22, 'Slash_Back': 10 / 22, 'Slash_Heavy': 12 / 28}
+HIT = {'Slash': 12 / 28, 'Slash_Back': 12 / 28, 'Slash_Heavy': 15 / 34}
 
 
 def rot(rx=0.0, ry=0.0, rz=0.0):
@@ -72,8 +76,10 @@ class Rig:
         self.last_grip = None   # previous key's blade orientation: keeps the grip from flipping between keys
 
     def _blade_rest(self):
-        sword = bpy.data.objects.get('Longsword')
+        sword = bpy.data.objects.get('Greatsword') or bpy.data.objects.get('Longsword')
         wrist = self.head['Wrist.R']
+        palm = (wrist + self.head['Middle2.R']) / 2
+        self.grip_off = palm - wrist
         if not sword:
             return Vector((0.21, 0.08, 0.97)).normalized(), Vector((0, 1, 0))
         pts = [sword.matrix_world @ v.co for v in sword.data.vertices]
@@ -84,6 +90,9 @@ class Rig:
         c = sum(upper, Vector()) / len(upper)
         spread = [(p - c) - blade * (p - c).dot(blade) for p in upper]
         wide = max(spread, key=lambda v: v.length).normalized()
+        # Where the right fist closes on the grip: the palm centre, moved onto the blade's axis.
+        grip = tip + blade * (palm - tip).dot(blade)
+        self.grip_off = grip - wrist
         return blade, blade.cross(wide).normalized()
 
     def capture_fingers(self, action, frame_no=0):
@@ -93,10 +102,20 @@ class Rig:
         arm.animation_data.action = action
         bpy.context.scene.frame_set(frame_no)
         for pb in arm.pose.bones:
-            if pb.name.startswith(FINGER_PREFIXES):
-                self.fingers[pb.name] = pb.rotation_quaternion.copy()
+            if pb.name.startswith(FINGER_PREFIXES) and pb.name.endswith('.R'):
+                q = pb.rotation_quaternion.copy()
+                self.fingers[pb.name] = q
+                # The left hand closes the same way (two-handed grip / fist): mirrored across the body.
+                self.fingers[pb.name[:-2] + '.L'] = Quaternion((q.w, q.x, -q.y, -q.z))
         self.idle = {pb.name: (pb.rotation_quaternion.copy(), pb.location.copy()) for pb in arm.pose.bones}
         arm.animation_data.action = None
+
+    def set_idle(self, pose):
+        """The pose the one-shot clips ease in from and out to (first frame of the authored Idle)."""
+        self.last_grip = None
+        self.idle = {n: (q, l) for n, (q, l) in self.solve(pose).items()}
+        for pb in self.arm.pose.bones:
+            self.idle.setdefault(pb.name, (Quaternion(), Vector()))
 
     # ------------------------------------------------------------ solving
 
@@ -144,19 +163,27 @@ class Rig:
             rel[f'Foot.{s}'] = rot(0, 0, math.degrees(yaw)) @ rot(pitch, 0, 0)
             out[f'Foot.{s}'] = ('loc', ankle - self.head[f'Foot.{s}'])
 
-        # arms
-        for s in 'LR':
+        # arms: the sword hand first, then the left hand (free, or on the grip below the right hand)
+        grip_r = blade_dir = None
+        for s in 'RL':
             spec = pose['hands'][s]
             shoulder = self._world_pos(totals, pos, f'UpperArm.{s}')
             up0, fore0 = self.arm_seg[s]
             elbow_pole = Vector(spec.get('elbow', (0, 1, -0.3)))
-            elbow, wrist = self._two_bone(shoulder, Vector(spec['at']), up0.length, fore0.length, elbow_pole)
+            target = Vector(spec['at'])
+            if s == 'L' and spec.get('on_grip', 0) > 0:
+                # Blend from the free position onto the handle, `grip` below the right hand.
+                fist = grip_r - blade_dir * spec['grip']
+                target = target.lerp(fist - (fist - shoulder).normalized() * 0.075, min(1.0, spec['on_grip']))
+            elbow, wrist = self._two_bone(shoulder, target, up0.length, fore0.length, elbow_pole)
             t_up = frame(elbow - shoulder, elbow_pole) @ frame(up0, Vector((0, 1, 0))).inverted()
             fore_carried = t_up @ fore0
             t_fore = fore_carried.rotation_difference(wrist - elbow).to_matrix() @ t_up
             parent_total = totals[f'Shoulder.{s}']
             if s == 'R':
                 t_fore, t_wrist = self._grip(t_fore, wrist - elbow, Vector(spec['blade']), Vector(spec.get('flat', (0, 0, 1))))
+                blade_dir = (t_wrist @ self.blade0).normalized()
+                grip_r = wrist + t_wrist @ self.grip_off
             else:
                 t_wrist = t_fore @ rot(*spec.get('wrist', (0, 0, 0)))
             rel[f'UpperArm.{s}'] = parent_total.inverted() @ t_up
@@ -300,16 +327,70 @@ def smooth(t):
     return t * t * (3 - 2 * t)
 
 
-# Run: one foot's path over a cycle (phase 0 = heel strike in front). (phase, y, z, pitch)
+def body(yaw=0.0, lean=0.0, drop=0.0, roll=0.0, head=None, rise=0.0, shift=(0.0, 0.0)):
+    """Spine + pelvis: `yaw` twists toward the character's left (hips lead, shoulders follow), `lean` bows
+    forward, `drop` sinks the hips (bent knees), `roll` tilts sideways; the head stays on target."""
+    return {
+        'body': (shift[0], shift[1] - lean * 0.003, rise - drop),
+        'spine': {
+            'Body': (lean * 0.45, roll * 0.2, yaw * 0.45),
+            'Hips': (0, 0, 0),
+            'Abdomen': (lean * 0.2, roll * 0.25, yaw * 0.18),
+            'Torso': (lean * 0.2, roll * 0.25, yaw * 0.2),
+            'Chest': (lean * 0.15, roll * 0.3, yaw * 0.17),
+            'Neck': (-lean * 0.35, -roll * 0.3, -yaw * 0.4),
+            'Head': ((head if head is not None else -lean * 0.3), -roll * 0.2, -yaw * 0.4),
+        },
+    }
+
+
+def feet(l, r):
+    """l / r: (x, y, z, pitch) ankle targets."""
+    return {'L': l, 'R': r}
+
+
+def two_hands(at, blade, flat=(0, 0, 1), elbow=(-0.4, 0.4, -0.8), left_elbow=(0.5, 0.3, -0.8), slide=0.2):
+    """Both hands on the grip: the right below the guard, the left `slide` further down the handle."""
+    return {'R': dict(at=at, blade=blade, flat=flat, elbow=elbow),
+            'L': dict(at=(0.3, -0.1, 1.0), grip=slide, on_grip=1.0, elbow=left_elbow, wrist=(0, 0, 0))}
+
+
+def free_left(at, elbow, wrist=(0, 0, 0)):
+    return dict(at=at, grip=0.2, on_grip=0.0, elbow=elbow, wrist=wrist)
+
+
+def pose(b, f, hands):
+    out = dict(b)
+    out['feet'] = f
+    out['hands'] = hands
+    return out
+
+
+# Fighting stance: wide, left foot forward, right foot back, knees soft.
+STANCE = feet((0.17, -0.14, 0.023, 0), (-0.17, 0.16, 0.023, 0))
+
+
+def idle_pose(t):
+    """Greatsword resting on the right shoulder, point high behind; the free hand loose at the hip."""
+    br = math.sin(2 * math.pi * t)
+    return pose(
+        body(yaw=-14, lean=4 + 1.5 * br, drop=0.07 + 0.012 * br, head=-2),
+        STANCE,
+        {'R': dict(at=(-0.22, -0.3, 1.46 - 0.012 * br), blade=(-0.08, 0.86, 0.5), flat=(0, 0, 1), elbow=(-0.8, 0.2, -0.6)),
+         'L': free_left((0.3, -0.06, 0.98 - 0.01 * br), (0.7, 0.5, -0.2), (0, 0, -20))},
+    )
+
+
+# Run: one foot's path over a cycle (phase 0 = heel strike in front): (phase, y, z, pitch)
 FOOT_PATH = [
-    (0.00, -0.30, 0.040, -8),
-    (0.20, 0.05, 0.030, 0),
-    (0.38, 0.38, 0.060, 30),   # toe-off
-    (0.52, 0.48, 0.300, 62),   # heel kicks up behind
-    (0.68, 0.18, 0.420, 40),   # thigh drives through
-    (0.82, -0.28, 0.300, 5),   # knee high in front, shin reaching
-    (0.93, -0.38, 0.120, -12),
-    (1.00, -0.30, 0.040, -8),
+    (0.00, -0.34, 0.040, -8),
+    (0.20, 0.06, 0.030, 0),
+    (0.38, 0.42, 0.070, 32),   # toe-off
+    (0.52, 0.52, 0.330, 65),   # heel kicks up behind
+    (0.68, 0.18, 0.450, 40),   # thigh drives through
+    (0.82, -0.32, 0.320, 5),   # knee high in front, shin reaching
+    (0.93, -0.42, 0.120, -12),
+    (1.00, -0.34, 0.040, -8),
 ]
 
 
@@ -322,163 +403,106 @@ def foot_at(phase):
 
 
 def run_pose(t):
-    """t in [0, 1): left heel strike at 0, right at 0.5."""
-    s = math.sin(2 * math.pi * t)          # +1 a quarter after the left strike
-    c = math.cos(2 * math.pi * t)          # +1 at the left strike
-    bob = -0.05 * math.cos(4 * math.pi * (t - 0.12)) - 0.025   # lowest at mid-stance, highest in flight
-    lift_l, lift_r = foot_at(t), foot_at(t + 0.5)
-    pose = {
-        'body': (0.0, 0.0, bob),
-        'spine': {
-            'Body': (14, 0, 0),
-            'Hips': (0, 3 * c, -9 * c),               # left hip swings forward with the left leg
-            'Abdomen': (2, 0, 4 * c),
-            'Torso': (2, 0, 6 * c),
-            'Chest': (2 + 2 * abs(s), -2 * c, 8 * c),  # shoulders counter the hips
-            'Neck': (-8, 0, -4 * c),
-            'Head': (-8 + 3 * math.cos(4 * math.pi * t), 0, -4 * c),
-        },
-        'feet': {
-            'L': (0.13, lift_l[0], lift_l[1], lift_l[2]),
-            'R': (-0.13, lift_r[0], lift_r[1], lift_r[2]),
-        },
-        'hands': {
-            # Free arm pumps against the left leg: back when the left foot strikes.
-            'L': dict(at=(0.27, -0.07 - 0.3 * -c, 1.08 + 0.1 * max(0.0, -c) + 0.03 * s),
-                      elbow=(0.3, 0.9 if c > 0 else 0.5, -0.6), wrist=(0, 0, -15)),
-            # Sword carried low at the side, trailing back and down, swinging a little with the stride.
-            'R': dict(at=(-0.3, -0.05 + 0.13 * c, 0.98 + 0.03 * s),
-                      blade=(-0.32, 0.72 + 0.1 * c, -0.45), flat=(-0.9, 0.0, 0.3), elbow=(-0.4, 0.8, -0.4)),
-        },
-    }
-    return pose
-
-
-def stance(front='L', depth=0.0, spread=1.0):
-    """Feet for a fighting stance; `depth` lunges the front foot forward and the back foot back."""
-    f = 0.13 * spread
-    if front == 'L':
-        return {'L': (f, -0.12 - depth, 0.023, 0), 'R': (-f, 0.16 + depth * 0.5, 0.023, 0)}
-    return {'L': (f, 0.16 + depth * 0.5, 0.023, 0), 'R': (-f, -0.12 - depth, 0.023, 0)}
-
-
-def slash_pose(yaw, lean, drop, feet, sword, left, chest_roll=0.0, head=None):
-    hips_yaw = yaw * 0.55
+    """Charging run, sword dragged one-handed behind, point just above the ground. Left strike at t=0."""
+    s = math.sin(2 * math.pi * t)
+    c = math.cos(2 * math.pi * t)
+    bob = -0.055 * math.cos(4 * math.pi * (t - 0.12)) - 0.04
+    fl, fr = foot_at(t), foot_at(t + 0.5)
     return {
-        'body': (0.0, -lean * 0.004, -drop),
+        'body': (0.0, 0.03, bob),
         'spine': {
-            'Body': (lean * 0.4, 0, hips_yaw),
-            'Hips': (0, 0, 0),
-            'Abdomen': (lean * 0.2, chest_roll * 0.3, yaw * 0.15),
-            'Torso': (lean * 0.2, chest_roll * 0.3, yaw * 0.15),
-            'Chest': (lean * 0.2, chest_roll * 0.4, yaw * 0.15),
-            'Neck': (-lean * 0.3, 0, -yaw * 0.35),
-            'Head': (head if head is not None else -lean * 0.3, 0, -yaw * 0.35),
+            'Body': (22, 0, 0),
+            'Hips': (0, 3 * c, -10 * c),
+            'Abdomen': (3, 0, 4 * c),
+            'Torso': (3, 0, 6 * c),
+            'Chest': (2 + 2 * abs(s), -2 * c, 8 * c),
+            'Neck': (-14, 0, -4 * c),
+            'Head': (-12 + 3 * math.cos(4 * math.pi * t), 0, -4 * c),
         },
-        'feet': feet,
-        'hands': {'R': sword, 'L': left},
+        'feet': feet((0.14, fl[0], fl[1], fl[2]), (-0.14, fr[0], fr[1], fr[2])),
+        'hands': {
+            'L': free_left((0.27, -0.12 - 0.32 * -c, 1.06 + 0.12 * max(0.0, -c) + 0.03 * s),
+                           (0.3, 0.9 if c > 0 else 0.5, -0.6), (0, 0, -15)),
+            # Sword hand low at the right hip, arm straight back; the blade trails, swaying with the stride.
+            'R': dict(at=(-0.34, 0.06 + 0.06 * c, 0.98 + 0.02 * s),
+                      blade=(-0.28 + 0.05 * c, 0.86, -0.4 - 0.03 * s), flat=(-1, 0, 0.25), elbow=(-0.5, 0.6, -0.4)),
+        },
     }
-
-
-def sword(at, blade, flat=(0, 0, 1), elbow=(-0.3, 0.6, -0.8)):
-    return dict(at=at, blade=blade, flat=flat, elbow=elbow)
-
-
-def guard_left(at=(0.26, -0.18, 1.05), elbow=(0.6, 0.6, -0.6)):
-    return dict(at=at, elbow=elbow, wrist=(0, 0, -10))
 
 
 def author(arm):
     rig = Rig(arm)
     rig.capture_fingers(bpy.data.actions['Idle'], 0)
 
-    # ---- Run: 20 frames (left strike 0, right strike 10)
-    keys = [(f, run_pose(f / 20)) for f in range(0, 21)]
-    rig.clip('Run', keys, loop=True)
+    # ---- Idle (loop): shoulder rest, slow heavy breathing
+    rig.clip('Idle', [(f, idle_pose(f / 48)) for f in range(0, 49, 2)], loop=True)
+    rig.set_idle(idle_pose(0))
 
-    # ---- Forehand: right → left. Contact at frame 10 (blade level, straight ahead).
-    neutral_feet = stance('L', 0.0)
-    load_feet = {'L': (0.13, -0.04, 0.05, 18), 'R': (-0.14, 0.18, 0.023, 0)}      # left heel lifting as weight goes back
-    step_feet = stance('L', 0.22, 1.15)
+    # ---- Run (loop): 20 frames, left strike 0, right strike 10
+    rig.clip('Run', [(f, run_pose(f / 20)) for f in range(0, 21)], loop=True)
+
+    lunge_l = feet((0.2, -0.46, 0.023, 0), (-0.18, 0.3, 0.05, 22))     # big step in with the left foot
+    lunge_r = feet((0.18, 0.28, 0.05, 22), (-0.2, -0.44, 0.023, 0))    # … with the right foot
+    load_r = feet((0.17, -0.06, 0.06, 20), (-0.2, 0.22, 0.023, 0))     # weight back on the right, left heel up
+    load_l = feet((0.2, 0.0, 0.023, 0), (-0.16, 0.26, 0.07, 24))
+
+    # ---- Slash: huge two-handed horizontal sweep, right → left. Contact at frame 12.
     keys = [
-        (0, slash_pose(0, 0, 0, neutral_feet, sword((-0.3, -0.16, 1.04), (-0.95, -0.2, 0.25)), guard_left())),
-        (4, slash_pose(-38, -4, 0.04, load_feet,
-                       sword((-0.34, 0.12, 1.42), (-0.35, 0.75, 0.55), flat=(0.4, 0.3, -0.9), elbow=(-0.5, 0.4, -0.7)),
-                       guard_left((0.3, -0.32, 1.22), (0.6, 0.2, -0.7)), chest_roll=-6)),
-        (6, slash_pose(-32, 0, 0.06, load_feet,
-                       sword((-0.38, 0.02, 1.4), (-0.8, 0.45, 0.35), flat=(0.2, 0.2, -1), elbow=(-0.5, 0.4, -0.7)),
-                       guard_left((0.3, -0.3, 1.2), (0.6, 0.2, -0.7)), chest_roll=-4)),
-        (8, slash_pose(-12, 8, 0.1, step_feet,
-                       sword((-0.36, -0.32, 1.32), (-0.85, -0.5, 0.05), flat=(0, 0, 1)),
-                       guard_left((0.32, -0.12, 1.15), (0.6, 0.4, -0.6)))),
-        (10, slash_pose(16, 14, 0.13, step_feet,
-                        sword((-0.06, -0.46, 1.26), (0.15, -1, -0.04), flat=(0, 0, 1), elbow=(-0.5, 0.2, -0.8)),
-                        guard_left((0.34, 0.02, 1.1), (0.5, 0.6, -0.5)), chest_roll=4)),
-        (12, slash_pose(40, 16, 0.14, step_feet,
-                        sword((0.22, -0.38, 1.18), (0.9, -0.25, -0.2), flat=(0, 0.2, 1), elbow=(-0.2, 0.3, -0.9)),
-                        guard_left((0.36, 0.12, 1.06), (0.4, 0.8, -0.4)), chest_roll=6)),
-        (15, slash_pose(48, 14, 0.13, step_feet,
-                        sword((0.26, -0.26, 1.08), (0.75, 0.45, -0.45), flat=(0.3, -0.3, 1), elbow=(-0.1, 0.4, -0.9)),
-                        guard_left((0.36, 0.14, 1.04), (0.4, 0.8, -0.4)), chest_roll=5)),
-        # Recover: bring the blade back up and around in front (not down through the floor).
-        (18, slash_pose(22, 8, 0.08, stance('L', 0.1, 1.05),
-                        sword((-0.08, -0.36, 1.12), (-0.25, -0.95, 0.15), flat=(0, 0, 1), elbow=(-0.5, 0.3, -0.8)),
-                        guard_left((0.32, 0.0, 1.06), (0.5, 0.6, -0.5)))),
-        (22, slash_pose(0, 0, 0, neutral_feet, sword((-0.3, -0.16, 1.04), (-0.95, -0.2, 0.25)), guard_left())),
+        (0, idle_pose(0)),
+        (6, pose(body(yaw=-62, lean=-6, drop=0.1, roll=-10), load_r,
+                 two_hands((-0.34, 0.16, 1.4), (-0.5, 0.82, 0.28), elbow=(-0.5, 0.5, -0.7), left_elbow=(0.3, -0.4, -0.8)))),
+        (9, pose(body(yaw=-34, lean=6, drop=0.13, roll=-4), load_r,
+                 two_hands((-0.44, -0.12, 1.3), (-1, 0.1, 0.06), left_elbow=(0.2, -0.5, -0.8)))),
+        (12, pose(body(yaw=14, lean=16, drop=0.2, roll=4), lunge_l,
+                  two_hands((-0.06, -0.5, 1.2), (0.06, -1, -0.02), left_elbow=(0.6, 0.2, -0.8)))),
+        (15, pose(body(yaw=58, lean=16, drop=0.2, roll=8), lunge_l,
+                  two_hands((0.3, -0.32, 1.14), (1, -0.08, -0.1), left_elbow=(0.6, 0.6, -0.5)))),
+        (19, pose(body(yaw=78, lean=12, drop=0.18, roll=10), lunge_l,
+                  two_hands((0.34, -0.02, 1.12), (0.55, 0.8, -0.22), elbow=(-0.2, -0.3, -0.9), left_elbow=(0.6, 0.6, -0.5)))),
+        (23, pose(body(yaw=30, lean=8, drop=0.12), STANCE,
+                  two_hands((0.0, -0.36, 1.42), (0.15, -0.3, 0.94), flat=(1, 0, 0), left_elbow=(0.7, 0.2, -0.6)))),
+        (28, idle_pose(0)),
     ]
     rig.clip('Slash', keys, idle_ends=True)
 
-    # ---- Backhand: left → right. Contact at frame 10.
-    load_feet = {'L': (0.14, -0.14, 0.023, 0), 'R': (-0.13, 0.12, 0.06, 20)}
-    step_feet = stance('R', 0.2, 1.15)
+    # ---- Slash_Back: reverse sweep, left → right, stepping in with the right foot. Contact at frame 12.
     keys = [
-        (0, slash_pose(0, 0, 0, neutral_feet, sword((-0.3, -0.16, 1.04), (-0.95, -0.2, 0.25)), guard_left())),
-        (4, slash_pose(40, -2, 0.04, load_feet,
-                       sword((0.12, -0.12, 1.36), (0.55, 0.65, 0.5), flat=(-0.5, 0.2, -0.85), elbow=(-0.6, 0.3, -0.7)),
-                       guard_left((0.34, 0.06, 1.08), (0.5, 0.6, -0.5)), chest_roll=5)),
-        (6, slash_pose(34, 2, 0.06, load_feet,
-                       sword((0.1, -0.22, 1.36), (0.85, 0.35, 0.3), flat=(-0.2, 0.1, -1), elbow=(-0.6, 0.3, -0.7)),
-                       guard_left((0.34, 0.06, 1.08), (0.5, 0.6, -0.5)), chest_roll=4)),
-        (8, slash_pose(14, 8, 0.1, step_feet,
-                       sword((-0.02, -0.42, 1.3), (0.7, -0.7, 0.05), flat=(0, 0, 1), elbow=(-0.7, 0.2, -0.6)),
-                       guard_left((0.3, -0.06, 1.12), (0.6, 0.4, -0.6)))),
-        (10, slash_pose(-16, 12, 0.13, step_feet,
-                        sword((-0.24, -0.46, 1.27), (-0.15, -1, -0.04), flat=(0, 0, 1), elbow=(-0.8, 0.1, -0.5)),
-                        guard_left((0.3, -0.24, 1.18), (0.6, 0.2, -0.7)), chest_roll=-4)),
-        (12, slash_pose(-40, 14, 0.14, step_feet,
-                        sword((-0.42, -0.3, 1.22), (-0.95, 0.15, -0.12), flat=(0, -0.2, 1), elbow=(-0.6, 0.6, -0.5)),
-                        guard_left((0.28, -0.32, 1.2), (0.6, 0.1, -0.7)), chest_roll=-6)),
-        (15, slash_pose(-46, 12, 0.13, step_feet,
-                        sword((-0.42, -0.18, 1.14), (-0.75, 0.55, -0.3), flat=(-0.3, -0.3, 1), elbow=(-0.5, 0.7, -0.5)),
-                        guard_left((0.28, -0.3, 1.18), (0.6, 0.1, -0.7)), chest_roll=-5)),
-        (22, slash_pose(0, 0, 0, neutral_feet, sword((-0.3, -0.16, 1.04), (-0.95, -0.2, 0.25)), guard_left())),
+        (0, idle_pose(0)),
+        (6, pose(body(yaw=55, lean=-4, drop=0.1, roll=8), load_l,
+                 two_hands((0.2, -0.04, 1.5), (0.62, 0.62, 0.45), elbow=(-0.6, -0.2, -0.7), left_elbow=(0.6, 0.6, -0.4)))),
+        (9, pose(body(yaw=30, lean=6, drop=0.13, roll=4), load_l,
+                 two_hands((0.32, -0.3, 1.36), (1, -0.18, 0.08), elbow=(-0.7, 0.2, -0.6), left_elbow=(0.6, 0.6, -0.5)))),
+        (12, pose(body(yaw=-14, lean=16, drop=0.2, roll=-4), lunge_r,
+                  two_hands((-0.12, -0.5, 1.24), (-0.06, -1, -0.04), elbow=(-0.7, 0.2, -0.6), left_elbow=(0.6, -0.1, -0.8)))),
+        (15, pose(body(yaw=-58, lean=16, drop=0.2, roll=-8), lunge_r,
+                  two_hands((-0.44, -0.28, 1.18), (-1, 0.05, -0.12), elbow=(-0.5, 0.6, -0.6), left_elbow=(0.2, -0.6, -0.7)))),
+        (19, pose(body(yaw=-74, lean=12, drop=0.18, roll=-10), lunge_r,
+                  two_hands((-0.42, 0.02, 1.16), (-0.55, 0.8, -0.2), elbow=(-0.4, 0.8, -0.4), left_elbow=(0.2, -0.6, -0.7)))),
+        (23, pose(body(yaw=-36, lean=8, drop=0.12), STANCE,
+                  two_hands((-0.3, -0.2, 1.4), (-0.25, 0.3, 0.92), flat=(0, 0, 1), elbow=(-0.8, 0.2, -0.5), left_elbow=(0.4, -0.5, -0.7)))),
+        (28, idle_pose(0)),
     ]
     rig.clip('Slash_Back', keys, idle_ends=True)
 
-    # ---- Heavy overhead finisher. Contact at frame 12, deep lunge.
-    rise_feet = {'L': (0.13, -0.2, 0.09, 25), 'R': (-0.13, 0.12, 0.05, 15)}
-    lunge_feet = stance('L', 0.36, 1.25)
+    # ---- Slash_Heavy: crouch, leap with the blade raised behind the back, smash it into the ground. Contact at 15.
+    air = feet((0.15, -0.2, 0.34, 25), (-0.15, 0.2, 0.42, 40))
+    crouch = feet((0.18, -0.2, 0.023, 0), (-0.18, 0.18, 0.023, 0))
+    land = feet((0.2, -0.5, 0.023, 0), (-0.2, 0.34, 0.05, 25))
     keys = [
-        (0, slash_pose(0, 0, 0, neutral_feet, sword((-0.3, -0.16, 1.04), (-0.95, -0.2, 0.25)), guard_left())),
-        (5, slash_pose(-14, -14, -0.06, rise_feet,
-                       sword((-0.16, 0.02, 1.84), (-0.1, 0.75, 0.66), flat=(1, 0, 0), elbow=(-0.8, 0.0, 0.4)),
-                       guard_left((0.24, -0.26, 1.5), (0.7, 0.0, -0.5)), head=-6)),
-        (8, slash_pose(-10, -16, -0.07, rise_feet,
-                       sword((-0.12, -0.04, 1.86), (-0.05, 0.35, 0.94), flat=(1, 0, 0), elbow=(-0.8, 0.0, 0.4)),
-                       guard_left((0.24, -0.26, 1.52), (0.7, 0.0, -0.5)), head=-8)),
-        (10, slash_pose(-4, 12, 0.08, lunge_feet,
-                        sword((-0.1, -0.42, 1.62), (0.02, -0.8, 0.6), flat=(1, 0, 0), elbow=(-0.8, 0.3, -0.3)),
-                        guard_left((0.28, -0.12, 1.3), (0.7, 0.3, -0.5)))),
-        (12, slash_pose(0, 30, 0.22, lunge_feet,
-                        sword((-0.06, -0.5, 1.1), (0.04, -0.75, -0.66), flat=(1, 0, 0), elbow=(-0.7, 0.4, -0.5)),
-                        guard_left((0.32, 0.06, 1.0), (0.5, 0.7, -0.4)), head=-18)),
-        (15, slash_pose(0, 34, 0.25, lunge_feet,
-                        sword((-0.08, -0.42, 0.92), (0.05, -0.45, -0.9), flat=(1, 0, 0), elbow=(-0.6, 0.5, -0.5)),
-                        guard_left((0.32, 0.1, 0.98), (0.5, 0.7, -0.4)), head=-20)),
-        (19, slash_pose(0, 30, 0.23, lunge_feet,
-                        sword((-0.1, -0.4, 0.94), (0.0, -0.5, -0.86), flat=(1, 0, 0), elbow=(-0.6, 0.5, -0.5)),
-                        guard_left((0.32, 0.08, 1.0), (0.5, 0.7, -0.4)), head=-16)),
-        (28, slash_pose(0, 0, 0, neutral_feet, sword((-0.3, -0.16, 1.04), (-0.95, -0.2, 0.25)), guard_left())),
+        (0, idle_pose(0)),
+        (5, pose(body(yaw=-24, lean=24, drop=0.26), crouch,
+                 two_hands((-0.3, 0.06, 1.05), (-0.35, 0.65, -0.65), flat=(-1, 0, 0), elbow=(-0.6, 0.5, -0.5), left_elbow=(0.5, -0.4, -0.6)))),
+        (9, pose(body(yaw=-6, lean=-16, rise=0.32, head=-4), air,
+                 two_hands((-0.06, 0.06, 2.12), (0.0, 0.62, -0.78), flat=(1, 0, 0), elbow=(-0.8, 0.0, 0.5), left_elbow=(0.8, 0.0, 0.5)))),
+        (12, pose(body(yaw=0, lean=-8, rise=0.36), air,
+                  two_hands((-0.04, -0.14, 2.16), (0.0, 0.05, 1), flat=(1, 0, 0), elbow=(-0.8, 0.0, 0.4), left_elbow=(0.8, 0.0, 0.4)))),
+        (15, pose(body(yaw=0, lean=34, drop=0.3, head=-22), land,
+                  two_hands((-0.04, -0.56, 0.96), (0.0, -0.8, -0.6), flat=(1, 0, 0), elbow=(-0.7, 0.3, -0.5), left_elbow=(0.7, 0.3, -0.5)))),
+        (20, pose(body(yaw=0, lean=32, drop=0.32, head=-18), land,
+                  two_hands((-0.04, -0.54, 0.94), (0.0, -0.78, -0.62), flat=(1, 0, 0), elbow=(-0.7, 0.3, -0.5), left_elbow=(0.7, 0.3, -0.5)))),
+        (26, pose(body(yaw=-10, lean=12, drop=0.14), STANCE,
+                  two_hands((-0.18, -0.32, 1.32), (-0.15, -0.3, 0.94), flat=(1, 0, 0), elbow=(-0.8, 0.2, -0.5), left_elbow=(0.6, -0.2, -0.7)))),
+        (34, idle_pose(0)),
     ]
     rig.clip('Slash_Heavy', keys, idle_ends=True)
     return rig

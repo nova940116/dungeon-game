@@ -18,7 +18,7 @@ const MIN_DRAW_TIME = 0.12;
  * Combo clips: how far into each clip the blade crosses the target (swordsman: scripts/blender/sword_moves.py HIT;
  * the archer's bow swing after "검을 뽑아라" uses 'attack' only).
  */
-const SLASH_HIT = { attack: 10 / 22, punch: 10 / 22, heavy: 12 / 28 } as const;
+const SLASH_HIT = { attack: 12 / 28, punch: 12 / 28, heavy: 15 / 34 } as const;
 const COMBO_CLIPS = ['attack', 'punch', 'heavy'] as const;
 /** The archer's bow swing (melee mode): where the bow crosses the target. */
 const BOW_SWING_HIT = 0.4;

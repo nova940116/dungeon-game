@@ -1,6 +1,7 @@
 """
-Re-authors the swordsman's Run / Slash / Slash_Back / Slash_Heavy clips (sword_moves.py) on an already
-built player_swordsman.glb, keeping its mesh, rig, Idle, HitRecieve and Death.
+Rebuilds the swordsman on an already built player_swordsman.glb: the dark greatsword restyle (greatsword.py:
+no cape, blackened armour, the greatsword) and the hand-authored Idle / Run / Slash / Slash_Back /
+Slash_Heavy clips (sword_moves.py). Keeps the body mesh, rig, HitRecieve and Death.
 
     Blender -b --factory-startup -P scripts/blender/reanimate_swordsman.py -- <in.glb> <out.glb>
 
@@ -15,6 +16,7 @@ import bpy
 argv = sys.argv[sys.argv.index('--') + 1:]
 SRC, OUT = argv[:2]
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import greatsword  # noqa: E402
 import sword_moves  # noqa: E402
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -25,6 +27,7 @@ if arm.animation_data:
     arm.animation_data.action = None
 for act in bpy.data.actions:
     act.use_fake_user = True
+greatsword.apply(arm)
 sword_moves.author(arm)
 print('clips:', sorted(a.name for a in bpy.data.actions))
 

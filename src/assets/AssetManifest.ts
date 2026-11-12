@@ -33,12 +33,13 @@ export const MODELS = {
     url: model('characters/player_archer.glb'), fit: 'height', size: 2.0, animated: true, pivot: 'origin', noGlow: true,
     clips: { idle: 'Bow_Idle', run: 'Run', draw: 'Bow_Draw', hold: 'Bow_Hold', release: 'Bow_Release', attack: 'Bow_Swing', hit: 'HitRecieve', death: 'Death' },
   },
-  // Built by `npm run assets:swordsman` (Blender): holy knight — silver plate, great helm, royal blue cape, longsword.
-  // Run and the three-hit combo (forehand, backhand, overhead finisher) are hand-authored in scripts/blender/sword_moves.py.
+  // Built by `npm run assets:swordsman` (Blender): dark greatsword warrior — blackened plate, great helm, a colossal
+  // two-handed greatsword (scripts/blender/greatsword.py). Idle, Run and the three-hit combo (two-handed sweep,
+  // reverse sweep, leaping ground smash) are hand-authored in scripts/blender/sword_moves.py.
   swordsman: {
     // Same body scale as the archer: measured without the sword (it points straight up in the rest pose),
     // and a bit taller overall because the helm crest rises above the archer's hair.
-    url: model('characters/player_swordsman.glb'), fit: 'height', size: 2.11, animated: true, pivot: 'origin', fitExclude: ['Longsword'], noGlow: true,
+    url: model('characters/player_swordsman.glb'), fit: 'height', size: 2.05, animated: true, pivot: 'origin', fitExclude: ['Greatsword'], noGlow: true,
     clips: { idle: 'Idle', run: 'Run', attack: 'Slash', punch: 'Slash_Back', heavy: 'Slash_Heavy', hit: 'HitRecieve', death: 'Death' },
   },
   slime: {

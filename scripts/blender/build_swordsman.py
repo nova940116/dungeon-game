@@ -351,8 +351,11 @@ for act in list(bpy.data.actions):
         bpy.data.actions.remove(act)
 
 
-# Run and the sword combo are hand-authored (sword_moves.py); Idle / HitRecieve / Death come from the source rig.
+# Dark greatsword warrior: cape and longsword replaced, armour blackened (greatsword.py). Idle, Run and the
+# sword combo are hand-authored (sword_moves.py); HitRecieve / Death come from the source rig.
+import greatsword  # noqa: E402
 import sword_moves  # noqa: E402
+greatsword.apply(arm)
 sword_moves.author(arm)
 print('clips:', sorted(a.name for a in bpy.data.actions))
 
