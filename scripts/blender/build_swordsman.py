@@ -11,8 +11,8 @@ Builds the swordsman player model — a holy knight, deliberately unlike the arc
 
     Blender -b --factory-startup -P scripts/blender/build_swordsman.py -- <character.glb> <head.glb> <out.glb> [--preview <dir>]
 
-Clips   Idle (Idle_Sword), Run, Slash (forehand), Slash_Back (the same swing reversed = backhand),
-        HitRecieve, Death — the blade crosses in front ~40% into Slash (~60% into Slash_Back).
+Clips   Idle (Idle_Sword), HitRecieve, Death from the source rig; Run, Slash (forehand), Slash_Back (backhand)
+        and Slash_Heavy (overhead finisher) hand-authored in sword_moves.py.
 World space (Blender): +Z up, the character faces -Y, its left is +X.
 """
 import math
@@ -351,25 +351,9 @@ for act in list(bpy.data.actions):
         bpy.data.actions.remove(act)
 
 
-def fcurves_of(action):
-    try:
-        from bpy_extras import anim_utils
-        cb = anim_utils.action_get_channelbag_for_slot(action, action.slots[0])
-        return cb.fcurves
-    except Exception:
-        return action.fcurves
-
-
-# Backhand: the forehand slash played in reverse.
-back = bpy.data.actions['Slash'].copy()
-back.name = 'Slash_Back'
-back.use_fake_user = True
-start, end = back.frame_range
-for fc in fcurves_of(back):
-    for kp in fc.keyframe_points:
-        kp.co.x = start + end - kp.co.x
-        kp.handle_left.x, kp.handle_right.x = start + end - kp.handle_right.x, start + end - kp.handle_left.x
-    fc.update()
+# Run and the sword combo are hand-authored (sword_moves.py); Idle / HitRecieve / Death come from the source rig.
+import sword_moves  # noqa: E402
+sword_moves.author(arm)
 print('clips:', sorted(a.name for a in bpy.data.actions))
 
 # ---------------------------------------------------------------- previews
@@ -384,7 +368,7 @@ if RENDER_DIR:
     scene.collection.objects.link(cam)
     scene.camera = cam
     target = Vector((0, 0, 0.95))
-    for clip, frame in (('Idle', 0), ('Run', 6), ('Slash', 6), ('Slash', 10), ('Slash_Back', 10), ('Death', 24)):
+    for clip, frame in (('Idle', 0), ('Run', 6), ('Slash', 4), ('Slash', 10), ('Slash_Back', 10), ('Slash_Heavy', 12), ('Death', 24)):
         arm.animation_data_create()
         arm.animation_data.action = bpy.data.actions[clip]
         scene.frame_set(frame)

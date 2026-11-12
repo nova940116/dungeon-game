@@ -5,6 +5,28 @@ import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { ENVIRONMENT_HDR, MODELS, SURFACES, surfaceUrls, type ModelKey, type ModelSpec, type SurfaceKey } from './AssetManifest';
 import { shared } from './ModelKit';
 
+/** Shiny materials sparkle: tiny hot highlights that bloom into white glints. Floors keep them matte enough to read. */
+const MIN_ROUGHNESS = 0.7;
+const MIN_METAL_ROUGHNESS = 0.6;
+/** Below this the authored metalness is just exporter noise (Quaternius files default to 0.4): treated as non-metal. */
+const METAL_FROM = 0.6;
+const MAX_METALNESS = 0.6;
+
+/**
+ * Removes specular glare from every loaded model: no near-mirror surfaces, no stray metalness, so the
+ * sun / environment can't produce over-bright glints that the bloom pass turns into sparkles.
+ * `noGlow` also turns off self-illumination (the player's visor, sword fuller, gems).
+ */
+function softenSpecular(m: THREE.MeshStandardMaterial, noGlow: boolean): void {
+  const metal = m.metalness >= METAL_FROM;
+  m.metalness = metal ? Math.min(m.metalness, MAX_METALNESS) : 0;
+  m.roughness = Math.max(m.roughness, metal ? MIN_METAL_ROUGHNESS : MIN_ROUGHNESS);
+  if (noGlow) {
+    m.emissive.setHex(0x000000);
+    m.emissiveIntensity = 0;
+  }
+}
+
 interface PreparedModel {
   spec: ModelSpec;
   source: THREE.Object3D;
@@ -137,6 +159,7 @@ class AssetLibrary {
       for (const m of mats) {
         shared(m);
         const std = m as THREE.MeshStandardMaterial;
+        if (std.isMeshStandardMaterial) softenSpecular(std, spec.noGlow === true);
         for (const t of [std.map, std.normalMap, std.emissiveMap, std.roughnessMap, std.metalnessMap]) if (t) shared(t);
       }
     });

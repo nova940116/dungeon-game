@@ -14,8 +14,14 @@ const RELEASE_SHARE = 0.4;
 const MAX_ANIM_SPEED = 6;
 const MIN_DRAW_TIME = 0.12;
 
-/** Slash clips: how far into the clip the blade crosses the target (forehand / reversed backhand). */
-const SLASH_HIT = { attack: 0.4, punch: 0.6 } as const;
+/**
+ * Combo clips: how far into each clip the blade crosses the target (swordsman: scripts/blender/sword_moves.py HIT;
+ * the archer's bow swing after "검을 뽑아라" uses 'attack' only).
+ */
+const SLASH_HIT = { attack: 10 / 22, punch: 10 / 22, heavy: 12 / 28 } as const;
+const COMBO_CLIPS = ['attack', 'punch', 'heavy'] as const;
+/** The archer's bow swing (melee mode): where the bow crosses the target. */
+const BOW_SWING_HIT = 0.4;
 
 export class Player {
   readonly radius = 0.42;
@@ -66,13 +72,14 @@ export class Player {
   }
 
   /**
-   * Swordsman: plays the forehand (even combo steps) or backhand slash so the blade crosses the
+   * Swordsman combo: forehand, backhand, then the overhead finisher, timed so the blade crosses the
    * target `hitDelay` seconds from now.
    */
   playSlash(step: number, hitDelay: number): void {
     // The archer (after "검을 뽑아라") only has the one bow swing.
-    const clip = this.cls === 'archer' || step % 2 === 0 ? 'attack' : 'punch';
-    const hitAt = this.model.duration(clip) * SLASH_HIT[clip];
+    const wanted = this.cls === 'archer' ? 'attack' : COMBO_CLIPS[step % COMBO_CLIPS.length];
+    const clip = this.model.has(wanted) ? wanted : 'attack';
+    const hitAt = this.model.duration(clip) * (this.cls === 'archer' ? BOW_SWING_HIT : SLASH_HIT[clip]);
     this.model.playOnce(clip, { fade: 0.04, timeScale: clamp(hitAt / hitDelay, 1, MAX_ANIM_SPEED) });
   }
 

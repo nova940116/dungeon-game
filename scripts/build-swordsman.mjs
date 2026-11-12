@@ -9,6 +9,7 @@
  *
  * Blender is found at $BLENDER, or /Applications/Blender.app on macOS, or `blender` on PATH.
  * Pass --preview to also render pose previews into .asset-cache/swordsman-preview/.
+ * Pass --reanimate to only re-author Run and the sword combo (scripts/blender/sword_moves.py) on the shipped model.
  */
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync } from 'node:fs';
@@ -27,6 +28,27 @@ const blender =
   process.env.BLENDER ??
   ['/Applications/Blender.app/Contents/MacOS/Blender', '/Applications/Blender.app/Contents/MacOS/blender'].find(existsSync) ??
   'blender';
+
+const optimize = () =>
+  execFileSync(
+    'npx',
+    ['gltf-transform', 'optimize', RAW, OUT,
+      '--compress', 'false', '--texture-compress', 'webp', '--texture-size', '512',
+      '--simplify', 'false', '--palette', 'false', '--flatten', 'false', '--join', 'false', '--instance', 'false'],
+    { cwd: ROOT, stdio: 'pipe' },
+  );
+
+// --reanimate: only re-author the hand-made clips (sword_moves.py) on the shipped model; no source models needed.
+if (process.argv.includes('--reanimate')) {
+  mkdirSync(dirname(RAW), { recursive: true });
+  console.log(`Blender: ${blender}`);
+  const log = execFileSync(blender, ['-b', '--factory-startup', '-P', join(ROOT, 'scripts', 'blender', 'reanimate_swordsman.py'), '--', OUT, RAW],
+    { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 64 * 1024 * 1024 });
+  for (const line of log.split('\n')) if (/^(clip |clips:|exported)/.test(line)) console.log(`  ${line}`);
+  optimize();
+  console.log(`  wrote ${OUT.replace(ROOT + '/', '')}`);
+  process.exit(0);
+}
 
 const missing = [BODY, HEAD].filter((p) => !existsSync(p));
 if (missing.length) {
@@ -50,11 +72,5 @@ try {
   }
 }
 
-execFileSync(
-  'npx',
-  ['gltf-transform', 'optimize', RAW, OUT,
-    '--compress', 'false', '--texture-compress', 'webp', '--texture-size', '512',
-    '--simplify', 'false', '--palette', 'false', '--flatten', 'false', '--join', 'false', '--instance', 'false'],
-  { cwd: ROOT, stdio: 'pipe' },
-);
+optimize();
 console.log(`  wrote ${OUT.replace(ROOT + '/', '')}`);
