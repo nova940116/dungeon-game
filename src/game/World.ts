@@ -1,7 +1,7 @@
 import type * as THREE from 'three';
 import { BALANCE } from '../config';
 import type { EventBus } from '../engine/EventBus';
-import { ENEMY_DEFS, type EnemyType } from '../data/enemies';
+import { ENEMY_DEFS, difficultyForRoom, type EnemyType } from '../data/enemies';
 import type { Difficulty, Enemy } from '../entities/Enemy';
 import { createEnemy } from '../entities/enemies';
 import { Hazard } from '../entities/Hazard';
@@ -50,8 +50,7 @@ export class World {
   }
 
   get difficulty(): Difficulty {
-    const n = this.roomNo - 1;
-    return { hpMul: 1 + n * BALANCE.enemyHpPerRoom, dmgMul: 1 + n * BALANCE.enemyDmgPerRoom };
+    return difficultyForRoom(this.roomNo);
   }
 
   get hasLivingEnemies(): boolean {

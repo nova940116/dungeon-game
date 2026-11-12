@@ -452,11 +452,6 @@ canvas {
   font-size: 13px;
   line-height: 1.45;
 }
-.card__stacks {
-  font-style: normal;
-  font-size: 11px;
-  color: var(--accent);
-}
 
 @media (max-width: 520px) {
   .panel__logo {
@@ -581,9 +576,6 @@ canvas {
 }
 
 /* owned augments (HUD) by tier, synergy counters */
-.skill__badge {
-  display: none;
-}
 .build .build__skills--compact {
   flex-direction: row;
   flex-wrap: wrap;
@@ -601,25 +593,8 @@ canvas {
 .build__skills--compact .skill--prism {
   border-bottom-color: #e6a8ff;
 }
-.build__skills--compact .skill__name,
-.build__skills--compact .skill__pips,
-.build__skills--compact .skill__count {
+.build__skills--compact .skill__name {
   display: none;
-}
-.build__skills--compact .skill__badge {
-  display: block;
-  position: absolute;
-  right: -3px;
-  bottom: -4px;
-  min-width: 13px;
-  padding: 0 3px;
-  border-radius: 999px;
-  background: var(--accent);
-  color: #111;
-  font-size: 9px;
-  font-weight: 900;
-  line-height: 13px;
-  text-align: center;
 }
 .skill--gold {
   border-left-color: #ffc94a;
@@ -849,9 +824,6 @@ canvas {
   line-height: 1.3;
   animation: skill-in 0.35s ease-out;
 }
-.skill--max {
-  border-left-color: var(--accent);
-}
 .skill__icon {
   width: 18px;
   text-align: center;
@@ -860,24 +832,6 @@ canvas {
 .skill__name {
   flex: 1;
   white-space: nowrap;
-}
-.skill__count {
-  color: var(--accent);
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-}
-.skill__pips {
-  display: inline-flex;
-  gap: 2px;
-}
-.skill__pips i {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.18);
-}
-.skill__pips i.is-on {
-  background: var(--accent);
 }
 @keyframes skill-in {
   from {

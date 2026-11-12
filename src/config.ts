@@ -22,8 +22,11 @@ export const BALANCE = {
   bossEvery: 5,
   /** Every Nth room is a stage boss (must be a multiple of `bossEvery`). */
   stageBossEvery: 10,
+  /** Enemy scaling: linear per room, then compounded per stage (every `stageBossEvery` rooms). */
   enemyHpPerRoom: 0.2,
   enemyDmgPerRoom: 0.07,
+  enemyHpPerStage: 1.35,
+  enemyDmgPerStage: 1.2,
   enemyBulletDamage: 10,
   enemySpawnTime: 0.8,
   /** Bosses take longer to materialize (intro banner + roar). */
@@ -35,8 +38,10 @@ export const BALANCE = {
   playerBaseHp: 100,
   playerInvulnerableTime: 0.7,
   bossClearHealRatio: 0.3,
+  /** XP to next level = xpBase + level × xpPerLevel + level² × xpGrowth. */
   xpBase: 18,
   xpPerLevel: 14,
+  xpGrowth: 2,
 } as const;
 
 export const ENGINE = {

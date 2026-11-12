@@ -1,13 +1,11 @@
 import { BALANCE } from '../config';
 import type { EventBus } from '../engine/EventBus';
-import { AUGMENTS, SETS, TIERS, augmentText, type AugmentContext, type AugmentDef, type TagId, type Tier } from '../data/augments';
+import { AUGMENTS, SETS, TIERS, type AugmentContext, type AugmentDef, type TagId, type Tier } from '../data/augments';
 import type { Player } from '../entities/Player';
 import type { GameEvents } from '../game/events';
 
 export interface AugmentOffer {
   augment: AugmentDef;
-  /** How many times the player already has this augment. */
-  stacks: number;
 }
 
 /** A pending draft: a normal level-up, or a boss reward with a minimum tier. */
@@ -25,25 +23,30 @@ export interface SetProgress {
 
 const STARTING_REROLLS = 2;
 
+/** XP needed to go from `level` to `level + 1`: linear base plus a quadratic term, so each level takes longer. */
+export const xpForLevel = (level: number): number =>
+  Math.round(BALANCE.xpBase + level * BALANCE.xpPerLevel + level * level * BALANCE.xpGrowth);
+
 /** Fights in melee: the swordsman, or an archer who took "검을 뽑아라". */
 export const isMelee = (player: Player): boolean => player.cls === 'swordsman' || player.stats.meleeMode;
 const OFFER_COUNT = 3;
 
-/** XP, levels and the augment draft (tiers, rerolls, synergy sets). */
+/** XP, levels and the augment draft (tiers, rerolls, synergy sets). Every augment can be taken once per run. */
 export class ProgressionSystem {
   level = 1;
   xp = 0;
   rerolls = STARTING_REROLLS;
   private readonly pending: PendingPick[] = [];
-  private readonly stacks = new Map<string, number>();
+  private readonly taken = new Set<string>();
   private readonly activeSets = new Set<TagId>();
   /** Randomness source (tests replace it). */
   random: () => number = Math.random;
 
   constructor(private readonly events: EventBus<GameEvents>) {}
 
+  /** XP needed for the next level: grows faster the higher the level. */
   get xpToNext(): number {
-    return BALANCE.xpBase + this.level * BALANCE.xpPerLevel;
+    return xpForLevel(this.level);
   }
 
   get pendingLevelUps(): number {
@@ -62,7 +65,7 @@ export class ProgressionSystem {
     this.rerolls = STARTING_REROLLS;
     this.pending.length = 0;
     this.pending.push({ minTier: 'silver', reward: false });
-    this.stacks.clear();
+    this.taken.clear();
     this.activeSets.clear();
     this.emitXp();
   }
@@ -114,15 +117,20 @@ export class ProgressionSystem {
     return offers.map((o, i) => (i === index ? replacement : o));
   }
 
-  choose(augment: AugmentDef, player: Player): string[] {
+  choose(augment: AugmentDef, player: Player): void {
     this.pending.shift();
-    return this.take(augment, player);
+    this.take(augment, player);
+  }
+
+  /** Drops the next draft when there is nothing left to offer (every augment already taken). */
+  skipPick(): void {
+    this.pending.shift();
   }
 
   /** Persistent augments the player owns (for the HUD), rarest first. */
   owned(): AugmentOffer[] {
-    return AUGMENTS.filter((a) => !a.instant && this.stacksOf(a.id) > 0)
-      .map((augment) => ({ augment, stacks: this.stacksOf(augment.id) }))
+    return AUGMENTS.filter((a) => !a.instant && this.has(a.id))
+      .map((augment) => ({ augment }))
       .sort((a, b) => TIERS[b.augment.tier].rank - TIERS[a.augment.tier].rank);
   }
 
@@ -134,40 +142,23 @@ export class ProgressionSystem {
   }
 
   tagCount(tag: TagId): number {
-    return AUGMENTS.filter((a) => !a.instant && a.tags.includes(tag) && this.stacksOf(a.id) > 0).length;
+    return AUGMENTS.filter((a) => !a.instant && a.tags.includes(tag) && this.has(a.id)).length;
   }
 
-  stacksOf(id: string): number {
-    return this.stacks.get(id) ?? 0;
+  /** Whether the augment was already taken this run (it is then never offered again). */
+  has(id: string): boolean {
+    return this.taken.has(id);
   }
 
   // ------------------------------------------------------------ internals
 
-  /** Applies an augment. Returns the names of any augments it granted on top (dice). */
-  private take(augment: AugmentDef, player: Player): string[] {
-    this.stacks.set(augment.id, this.stacksOf(augment.id) + 1);
-    const granted: string[] = [];
+  private take(augment: AugmentDef, player: Player): void {
+    this.taken.add(augment.id);
     const ctx: AugmentContext = {
-      grantRandom: (tier, count) => {
-        const names: string[] = [];
-        const picked = new Set<string>();
-        for (let i = 0; i < count; i++) {
-          // Distinct augments: "2 random augments" never means one augment twice.
-          const pool = this.pool(player, tier, true).filter((a) => !a.instant && !picked.has(a.id));
-          if (!pool.length) break;
-          const pick = pool[Math.floor(this.random() * pool.length)];
-          picked.add(pick.id);
-          this.take(pick, player);
-          names.push(augmentText(pick, player.cls).name);
-        }
-        granted.push(...names);
-        return names;
-      },
       addRerolls: (n) => void (this.rerolls += n),
     };
     augment.apply(player, ctx);
     this.checkSets(player);
-    return granted;
   }
 
   private checkSets(player: Player): void {
@@ -179,11 +170,11 @@ export class ProgressionSystem {
     }
   }
 
-  private pool(player: Player, tier: Tier, exact = false): AugmentDef[] {
+  private pool(player: Player, tier: Tier): AugmentDef[] {
     return AUGMENTS.filter(
       (a) =>
-        (exact ? a.tier === tier : TIERS[a.tier].rank >= TIERS[tier].rank) &&
-        this.stacksOf(a.id) < a.maxStacks &&
+        a.tier === tier &&
+        !this.has(a.id) &&
         (!a.only || a.only === player.cls) &&
         (a.ranged ? !isMelee(player) : true) &&
         (a.melee ? isMelee(player) : true) &&
@@ -200,10 +191,10 @@ export class ProgressionSystem {
     // Rolled tier first; if it is exhausted, fall back to lower tiers. Legendary only in a legendary draft.
     const fallback: Tier[] = minTier === 'prism' ? ['prism', 'gold', 'silver'] : ['gold', 'silver'];
     for (const t of new Set<Tier>([this.rollTier(minTier), ...fallback])) {
-      const pool = this.pool(player, t, true).filter((a) => !exclude.includes(a.id));
+      const pool = this.pool(player, t).filter((a) => !exclude.includes(a.id));
       if (pool.length) {
         const augment = this.weightedPick(pool);
-        return { augment, stacks: this.stacksOf(augment.id) };
+        return { augment };
       }
     }
     return null;

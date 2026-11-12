@@ -150,9 +150,9 @@ export class Screens {
       const tags = a.tags.map((tag) => {
         const set = { ...SETS[tag], name: setName(tag, opts.cls) };
         const { have, need } = opts.setInfo(tag);
-        const owned = offer.stacks > 0;
-        const after = owned ? have : have + 1;
-        const completes = !owned && have < need && after >= need;
+        // Offered augments are never owned yet, so taking one always adds to its sets.
+        const after = have + 1;
+        const completes = have < need && after >= need;
         return h(
           'span',
           { className: `tag${completes ? ' tag--complete' : ''}`, attrs: { title: `${set.name} ${need}개: ${set.bonus}` } },
@@ -171,7 +171,6 @@ export class Screens {
           h('b', { className: 'card__name' }, text.name),
           h('small', { className: 'card__desc' }, text.description),
           tags.length > 0 && h('div', { className: 'card__tags' }, ...tags),
-          offer.stacks > 0 && h('em', { className: 'card__stacks' }, `보유 ${offer.stacks}${a.maxStacks < 99 ? ` / ${a.maxStacks}` : ''}`),
         ),
         h('button', { className: 'reroll', onClick: () => reroll(index), attrs: rerolls > 0 ? {} : { disabled: '' } }, `↻ 다시 뽑기`),
       );

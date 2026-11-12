@@ -113,3 +113,19 @@ export const enemyPoolForRoom = (roomNo: number): EnemyType[] =>
   (SPAWN_TABLE.find((row) => roomNo <= row.untilRoom) ?? SPAWN_TABLE[SPAWN_TABLE.length - 1]).pool;
 
 export const enemyCountForRoom = (roomNo: number): number => Math.min(3 + Math.floor(roomNo / 2), 9);
+
+/** 0 for rooms 1–10, 1 for rooms 11–20, … (a stage ends with its stage boss). */
+export const stageOf = (roomNo: number): number => Math.floor((Math.max(1, roomNo) - 1) / BALANCE.stageBossEvery);
+
+/**
+ * Enemy HP / damage multipliers for a room: a steady climb every room, compounded by a bigger
+ * jump each new stage, so later stages hit harder and take longer to kill.
+ */
+export function difficultyForRoom(roomNo: number): { hpMul: number; dmgMul: number } {
+  const n = Math.max(0, roomNo - 1);
+  const stage = stageOf(roomNo);
+  return {
+    hpMul: (1 + n * BALANCE.enemyHpPerRoom) * BALANCE.enemyHpPerStage ** stage,
+    dmgMul: (1 + n * BALANCE.enemyDmgPerRoom) * BALANCE.enemyDmgPerStage ** stage,
+  };
+}

@@ -4,7 +4,7 @@ import { EventBus } from '../src/engine/EventBus';
 import { createDefaultStats } from '../src/entities/PlayerStats';
 import type { Player } from '../src/entities/Player';
 import type { GameEvents } from '../src/game/events';
-import { ProgressionSystem } from '../src/systems/ProgressionSystem';
+import { ProgressionSystem, xpForLevel } from '../src/systems/ProgressionSystem';
 
 /** Minimal stand-in for Player (no Three.js needed). */
 function fakePlayer(cls: Player['cls'] = 'archer'): Player {
@@ -77,7 +77,7 @@ describe('ProgressionSystem', () => {
     expect(p.pendingLevelUps).toBe(p.level - 1);
   });
 
-  it('offers three different augments and never one past its max stacks', () => {
+  it('offers three different augments and never one already taken', () => {
     const { p, player } = setup();
     p.choose(get('sideShot'), player);
     expect(player.stats.sideArrows).toBe(true);
@@ -87,6 +87,33 @@ describe('ProgressionSystem', () => {
       expect(new Set(offers.map((o) => o.augment.id)).size).toBe(3);
       expect(offers.some((o) => o.augment.id === 'sideShot')).toBe(false);
     }
+  });
+
+  it('never offers the same augment twice in a run, even ones that used to stack', () => {
+    const { p, player } = setup();
+    const seen = new Set<string>();
+    for (let i = 0; i < 200; i++) {
+      p.grantReward(i % 3 === 0 ? 'prism' : i % 2 ? 'gold' : 'silver');
+      const offers = p.rollOffers(player);
+      if (!offers.length) break;
+      const pick = offers[0].augment;
+      expect(seen.has(pick.id)).toBe(false);
+      seen.add(pick.id);
+      p.choose(pick, player);
+    }
+    expect(seen.size).toBeGreaterThan(30);
+    expect(p.rollOffers(player).every((o) => !seen.has(o.augment.id))).toBe(true);
+  });
+
+  it('XP needed per level keeps growing, faster and faster', () => {
+    const steps = Array.from({ length: 30 }, (_, i) => xpForLevel(i + 1));
+    for (let i = 1; i < steps.length; i++) {
+      expect(steps[i]).toBeGreaterThan(steps[i - 1]);
+      if (i > 1) expect(steps[i] - steps[i - 1]).toBeGreaterThan(steps[i - 1] - steps[i - 2]);
+    }
+    const { p } = setup();
+    p.level = 10;
+    expect(p.xpToNext).toBe(xpForLevel(10));
   });
 
   it('only offers healing when hurt', () => {
@@ -144,7 +171,7 @@ describe('ProgressionSystem', () => {
     const onSet = vi.fn();
     events.on('augment:set', onSet);
     p.choose(get('emberTip'), player);
-    p.choose(get('emberTip'), player); // stacks don't count twice
+    p.choose(get('emberTip'), player); // taking it again changes nothing
     expect(p.tagCount('fire')).toBe(1);
     p.choose(get('explosive'), player);
     expect(player.stats.burnExplode).toBe(false);
@@ -156,16 +183,8 @@ describe('ProgressionSystem', () => {
     expect(p.sets().find((s) => s.tag === 'fire')).toMatchObject({ have: 4, active: true });
   });
 
-  it('dice grant distinct random augments of their tier', () => {
-    for (let run = 0; run < 200; run++) {
-      const { p, player } = setup();
-      const granted = p.choose(get('goldDice'), player);
-      expect(granted).toHaveLength(2);
-      expect(new Set(granted).size).toBe(2);
-      const owned = p.owned().map((o) => o.augment);
-      expect(owned.filter((a) => a.tier === 'gold')).toHaveLength(2);
-      expect(owned.some((a) => a.id === 'goldDice')).toBe(false);
-    }
+  it('has no dice augments', () => {
+    expect(AUGMENTS.some((a) => a.id.endsWith('Dice'))).toBe(false);
   });
 
   it('trade-offs change both sides', () => {
@@ -184,7 +203,7 @@ describe('ProgressionSystem', () => {
       for (let i = 0; i < 400; i++) {
         p.grantReward(tier);
         for (const o of p.rollOffers(player)) seen.add(o.augment.id);
-        p.choose(get('sharpTip'), player); // consume the pending draft without changing the pool
+        p.skipPick(); // consume the pending draft without changing the pool
       }
       return [...seen].map(get);
     };
@@ -222,7 +241,7 @@ describe('ProgressionSystem', () => {
         expect(o.augment.ranged).toBeFalsy();
         expect(o.augment.id).not.toBe('drawSword');
       }
-      p.choose(get('sharpTip'), player);
+      p.skipPick();
     }
   });
 });

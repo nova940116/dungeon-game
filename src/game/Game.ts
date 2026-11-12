@@ -321,11 +321,17 @@ export class Game {
     this.state = 'skillPick';
     this.input.reset();
     const p = this.progression;
+    const offers = p.rollOffers(this.player);
+    if (!offers.length) {
+      // Every augment has already been taken: nothing left to draft.
+      p.skipPick();
+      return;
+    }
     const reward = p.nextPick?.reward ? p.nextPick.minTier : null;
     this.screens.showAugmentPick({
       title: reward ? (reward === 'prism' ? '💎 보스 보상 — 전설' : '✨ 보스 보상 — 희귀') : '레벨 업! ✨',
       cls: this.player.cls,
-      offers: p.rollOffers(this.player),
+      offers,
       rerolls: p.rerolls,
       setInfo: (tag) => ({ have: p.tagCount(tag), need: SETS[tag].need }),
       onReroll: (offers, index) => {
@@ -337,13 +343,12 @@ export class Game {
   }
 
   private chooseAugment(offer: AugmentOffer): void {
-    const granted = this.progression.choose(offer.augment, this.player);
+    this.progression.choose(offer.augment, this.player);
     this.player.shield = Math.max(this.player.shield, this.player.stats.shieldPerRoom);
     this.screens.hide();
     this.refreshHealth();
     this.refreshBuild();
-    if (granted.length) this.hud.toast(`🎲 ${granted.join(' · ')}`, 2.4);
-    else if (offer.augment.tier !== 'silver') this.hud.toast(`${TIERS[offer.augment.tier].label}: ${augmentText(offer.augment, this.player.cls).name}`, 1.4);
+    if (offer.augment.tier !== 'silver') this.hud.toast(`${TIERS[offer.augment.tier].label}: ${augmentText(offer.augment, this.player.cls).name}`, 1.4);
     this.state = 'playing';
   }
 
@@ -434,7 +439,7 @@ export class Game {
     const cls = this.player.cls;
     this.hud.setBuild(
       { damage: s.damage, attacksPerSecond: s.volleys / s.attackInterval, critChance: s.critChance, arrowsPerVolley, reach: isMelee(this.player) ? meleeReach(s) : undefined },
-      this.progression.owned().map(({ augment, stacks }) => ({ ...augment, ...augmentText(augment, cls), stacks })),
+      this.progression.owned().map(({ augment }) => ({ ...augment, ...augmentText(augment, cls) })),
       this.progression.sets().map((p) => ({ ...p, icon: SETS[p.tag].icon, name: setName(p.tag, cls), bonus: SETS[p.tag].bonus })),
     );
   }

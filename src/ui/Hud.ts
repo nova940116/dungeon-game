@@ -2,8 +2,6 @@ import { clamp, shieldedRatios } from '../utils/math';
 import { h, requireElement } from './dom';
 
 const FADE_MS = 280;
-/** Skills with at most this many stacks show pips (●●○); others show a ×N count. */
-const MAX_PIPS = 5;
 /** Above this many owned augments the HUD list collapses to icons. */
 const COMPACT_AFTER = 6;
 
@@ -11,8 +9,6 @@ export interface SkillBadge {
   icon: string;
   name: string;
   description: string;
-  stacks: number;
-  maxStacks: number;
   /** Rarity ('silver' | 'gold' | 'prism'): colours the badge. */
   tier?: string;
 }
@@ -139,20 +135,14 @@ export class Hud {
     // Many augments: switch from named rows to a compact icon grid (names stay in the tooltip).
     this.skills.classList.toggle('build__skills--compact', skills.length > COMPACT_AFTER);
     this.skills.replaceChildren(
-      ...skills.map((s) => {
-        const level =
-          s.maxStacks <= MAX_PIPS
-            ? h('span', { className: 'skill__pips' }, ...Array.from({ length: s.maxStacks }, (_, i) => h('i', { className: i < s.stacks ? 'is-on' : '' })))
-            : h('span', { className: 'skill__count' }, `×${s.stacks}`);
-        return h(
+      ...skills.map((s) =>
+        h(
           'li',
-          { className: `skill skill--${s.tier ?? 'silver'}${s.stacks >= s.maxStacks ? ' skill--max' : ''}`, attrs: { title: `${s.name} — ${s.description}` } },
+          { className: `skill skill--${s.tier ?? 'silver'}`, attrs: { title: `${s.name} — ${s.description}` } },
           h('span', { className: 'skill__icon' }, s.icon),
           h('span', { className: 'skill__name' }, s.name),
-          level,
-          s.stacks > 1 && h('span', { className: 'skill__badge' }, s.stacks),
-        );
-      }),
+        ),
+      ),
     );
   }
 
