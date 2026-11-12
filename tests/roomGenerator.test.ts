@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ROOM } from '../src/config';
+import { enemyCountForRoom, enemyPoolForRoom } from '../src/data/enemies';
 import { resolveCircleVsBoxes } from '../src/world/Collision';
 import { generateObstacles, generateWave } from '../src/world/RoomGenerator';
 
@@ -30,6 +31,29 @@ describe('RoomGenerator', () => {
       const wave = generateWave(12, false, rocks);
       expect(wave.filter((s) => s.type === 'golem').length).toBeLessThanOrEqual(2);
       for (const s of wave) expect(resolveCircleVsBoxes({ ...s }, 0.5, rocks)).toBe(false);
+    }
+  });
+
+  it('rooms 11–19 are made of trolls, bees and carnivorous plants only', () => {
+    for (let room = 11; room <= 19; room++) {
+      if (room === 15) continue; // mid-boss
+      expect(new Set(enemyPoolForRoom(room))).toEqual(new Set(['troll', 'bee', 'plant']));
+      for (let run = 0; run < 30; run++) {
+        const wave = generateWave(room, false, generateObstacles(false));
+        for (const s of wave) expect(['troll', 'bee', 'plant']).toContain(s.type);
+        expect(wave.filter((s) => s.type === 'troll').length).toBeLessThanOrEqual(3);
+      }
+    }
+    for (const room of [1, 9, 21, 29]) expect(enemyPoolForRoom(room)).not.toContain('troll');
+  });
+
+  it('every stage starts with a moderate wave and grows to a swarm by its ninth room', () => {
+    for (const start of [1, 11, 21, 31]) {
+      const counts = Array.from({ length: 9 }, (_, i) => enemyCountForRoom(start + i));
+      expect(counts[0]).toBe(4);
+      expect(counts[8]).toBe(12);
+      for (let i = 1; i < 9; i++) expect(counts[i]).toBeGreaterThan(counts[i - 1]);
+      expect(generateWave(start + 8, false, [])).toHaveLength(12);
     }
   });
 });

@@ -19,6 +19,9 @@ const DEATH_COLORS: Partial<Record<EnemyType, number>> = {
   bat: 0xc58bff,
   shooter: 0x5ab8ff,
   golem: 0xffb070,
+  troll: 0x8fbf5a,
+  bee: 0xffc83a,
+  plant: 0xff4a6a,
 };
 const MINION_SPAWN_COLOR = 0xb46bff;
 

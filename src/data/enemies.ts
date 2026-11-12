@@ -2,6 +2,7 @@ import { BALANCE } from '../config';
 
 export type EnemyType =
   | 'slime' | 'bat' | 'shooter' | 'golem'
+  | 'troll' | 'bee' | 'plant'
   | 'midboss' | 'spiderQueen' | 'boss' | 'necromancer'
   // summons
   | 'spiderling' | 'skeleton' | 'wraith' | 'deathKnight';
@@ -54,6 +55,10 @@ export const ENEMY_DEFS: Record<EnemyType, EnemyDef> = {
   bat: def({ hp: 26, radius: 0.45, contactDamage: 10, xp: 5, barHeight: 1.45, hoverY: 0.9, flying: true }),
   shooter: def({ hp: 46, radius: 0.55, contactDamage: 12, xp: 8, barHeight: 1.9 }),
   golem: def({ hp: 130, radius: 0.85, contactDamage: 18, xp: 15, barHeight: 2.9, maxPerRoom: 2 }),
+  // Rooms 11–19 (odd stages): see `enemyPoolForRoom`.
+  troll: def({ hp: 150, radius: 0.75, contactDamage: 18, xp: 13, barHeight: 3.0, maxPerRoom: 3 }),
+  bee: def({ hp: 30, radius: 0.45, contactDamage: 11, xp: 5, barHeight: 1.95, hoverY: 0.35, flying: true }),
+  plant: def({ hp: 75, radius: 0.7, contactDamage: 14, xp: 9, barHeight: 2.7 }),
   midboss: def({
     hp: 620, radius: 1.25, contactDamage: 22, xp: 45, barHeight: 4.6, boss: true,
     bossInfo: {
@@ -102,17 +107,30 @@ export function bossTypeForRoom(roomNo: number): EnemyType | null {
   return BOSS_CYCLE[(roomNo / BALANCE.bossEvery - 1) % BOSS_CYCLE.length];
 }
 
-/** Which enemies can appear, by room number (first matching entry wins). */
+/** Which enemies can appear in the first stage (rooms 1–9), by room number (first matching entry wins). */
 const SPAWN_TABLE: { untilRoom: number; pool: EnemyType[] }[] = [
   { untilRoom: 2, pool: ['slime', 'slime', 'bat'] },
   { untilRoom: 6, pool: ['slime', 'bat', 'shooter', 'shooter'] },
   { untilRoom: Infinity, pool: ['slime', 'bat', 'shooter', 'golem'] },
 ];
 
-export const enemyPoolForRoom = (roomNo: number): EnemyType[] =>
-  (SPAWN_TABLE.find((row) => roomNo <= row.untilRoom) ?? SPAWN_TABLE[SPAWN_TABLE.length - 1]).pool;
+/** Odd stages (rooms 11–19, 31–39, …) bring their own roster: trolls, bees and carnivorous plants. */
+const SECOND_ROSTER: EnemyType[] = ['troll', 'bee', 'bee', 'plant'];
 
-export const enemyCountForRoom = (roomNo: number): number => Math.min(3 + Math.floor(roomNo / 2), 9);
+export function enemyPoolForRoom(roomNo: number): EnemyType[] {
+  if (stageOf(roomNo) % 2 === 1) return SECOND_ROSTER;
+  return (SPAWN_TABLE.find((row) => roomNo <= row.untilRoom) ?? SPAWN_TABLE[SPAWN_TABLE.length - 1]).pool;
+}
+
+/** Position of a room inside its stage: 1–9 for regular rooms (10 is the stage boss). */
+export const roomInStage = (roomNo: number): number => ((Math.max(1, roomNo) - 1) % BALANCE.stageBossEvery) + 1;
+
+/**
+ * Regular-room wave size: a moderate pack in the first room of every stage (1, 11, 21, …),
+ * one more each room, up to a big swarm in the ninth (9, 19, 29, …).
+ */
+export const enemyCountForRoom = (roomNo: number): number =>
+  BALANCE.enemiesFirstRoom + (roomInStage(roomNo) - 1) * BALANCE.enemiesPerRoom;
 
 /** 0 for rooms 1–10, 1 for rooms 11–20, … (a stage ends with its stage boss). */
 export const stageOf = (roomNo: number): number => Math.floor((Math.max(1, roomNo) - 1) / BALANCE.stageBossEvery);

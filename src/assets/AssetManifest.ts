@@ -54,6 +54,19 @@ export const MODELS = {
     url: model('characters/enemy_giant.glb'), fit: 'height', size: 2.5, animated: true,
     clips: { idle: 'Idle', move: 'Walk', attack: 'Attack', hit: 'HitRecieve', death: 'Death' },
   },
+  // Regular enemies of rooms 11–19, built from scratch by `npm run assets:bosses` (scripts/blender/stage2.py).
+  troll: {
+    url: model('characters/enemy_troll.glb'), fit: 'height', size: 2.7, animated: true, pivot: 'origin',
+    clips: { idle: 'Idle', move: 'Walk', attack: 'Attack', punch: 'Punch', hit: 'Hit', death: 'Death' },
+  },
+  bee: {
+    url: model('characters/enemy_bee.glb'), fit: 'height', size: 1.3, animated: true, pivot: 'origin',
+    clips: { idle: 'Flying', move: 'Flying', attack: 'Attack', hit: 'Hit', death: 'Death' },
+  },
+  plant: {
+    url: model('characters/enemy_plant.glb'), fit: 'height', size: 2.5, animated: true, pivot: 'origin',
+    clips: { idle: 'Idle', move: 'Idle', attack: 'Attack', hit: 'Hit', death: 'Death' },
+  },
   // Bosses are modelled, rigged and animated from scratch by `npm run assets:bosses` (scripts/blender/boss_*.py).
   golemBoss: {
     url: model('characters/boss_golem.glb'), fit: 'height', size: 4.7, animated: true, pivot: 'origin',

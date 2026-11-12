@@ -3,11 +3,11 @@ Builds the bosses and their summons from scratch (no source assets) and exports 
 
     Blender -b --factory-startup -P scripts/blender/build_bosses.py -- <out dir> [--only <key>[,<key>…]] [--preview <dir> [--closeup]]
 
-Keys: golem, demon, spider, spiderling, necro, skeleton, wraith, knight
+Keys: golem, demon, spider, spiderling, necro, skeleton, wraith, knight, troll, bee, plant
 
 --preview renders a contact sheet of key poses per boss; --closeup renders large rest-pose views instead.
 
-See boss_golem.py / boss_demon.py / spider.py / undead.py for the designs and bosskit.py for the modelling helpers.
+See boss_golem.py / boss_demon.py / spider.py / undead.py / stage2.py for the designs and bosskit.py for the modelling helpers.
 """
 import importlib
 import os
@@ -34,6 +34,10 @@ MODELS = {
     'skeleton': ('undead', 'build_skeleton', 'enemy_skeleton.glb'),
     'wraith': ('undead', 'build_wraith', 'enemy_wraith.glb'),
     'knight': ('undead', 'build_death_knight', 'enemy_death_knight.glb'),
+    # Regular enemies of rooms 11–19
+    'troll': ('stage2', 'build_troll', 'enemy_troll.glb'),
+    'bee': ('stage2', 'build_bee', 'enemy_bee.glb'),
+    'plant': ('stage2', 'build_plant', 'enemy_plant.glb'),
 }
 only = flag('--only')
 

@@ -45,9 +45,9 @@ export function generateWave(roomNo: number, isBoss: boolean, obstacles: readonl
   const counts = new Map<EnemyType, number>();
   const wave: SpawnSpec[] = [];
   for (let i = 0; i < enemyCountForRoom(roomNo); i++) {
+    const atCap = (t: EnemyType) => (counts.get(t) ?? 0) >= (ENEMY_DEFS[t].maxPerRoom ?? Infinity);
     let type = pickOne(pool);
-    const cap = ENEMY_DEFS[type].maxPerRoom;
-    if (cap !== undefined && (counts.get(type) ?? 0) >= cap) type = 'shooter';
+    if (atCap(type)) type = pickOne(pool.filter((t) => !atCap(t)));
     counts.set(type, (counts.get(type) ?? 0) + 1);
     wave.push({ type, ...findFreeSpot(ENEMY_DEFS[type].radius + 0.3, obstacles) });
   }

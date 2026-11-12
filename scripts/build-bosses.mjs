@@ -5,7 +5,7 @@
  *
  *   npm run assets:bosses                    # Blender (headless) → GLB
  *   npm run assets:bosses -- --preview       # also render pose sheets into .asset-cache/boss-preview/
- *   npm run assets:bosses -- --only spider,spiderling   # any of: golem demon spider spiderling necro skeleton wraith knight
+ *   npm run assets:bosses -- --only spider,spiderling   # any of: golem demon spider spiderling necro skeleton wraith knight troll bee plant
  *
  * Blender is found at $BLENDER, or /Applications/Blender.app on macOS, or `blender` on PATH.
  */

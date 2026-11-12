@@ -27,6 +27,9 @@ export const BALANCE = {
   enemyDmgPerRoom: 0.07,
   enemyHpPerStage: 1.35,
   enemyDmgPerStage: 1.2,
+  /** Wave size: first room of a stage, plus this many per room after it (room 9 of a stage = 4 + 8 = 12). */
+  enemiesFirstRoom: 4,
+  enemiesPerRoom: 1,
   enemyBulletDamage: 10,
   enemySpawnTime: 0.8,
   /** Bosses take longer to materialize (intro banner + roar). */
