@@ -7,6 +7,7 @@ import { EventBus } from '../engine/EventBus';
 import { Input } from '../engine/Input';
 import { SETS, TIERS, augmentText, setName } from '../data/augments';
 import { CLASSES, type PlayerClass } from '../data/classes';
+import { xpRewardMul } from '../data/enemies';
 import { moodForRoom } from '../data/themes';
 import type { BossEnemy } from '../entities/enemies/BossEnemy';
 import { Player } from '../entities/Player';
@@ -277,7 +278,7 @@ export class Game {
     this.hud.setRoom(roomNo);
 
     if (!spawnWave) return;
-    player.shield = Math.max(player.shield, player.stats.shieldPerRoom);
+    player.shield = Math.max(player.shield, player.stats.shieldPerRoom * player.maxHp);
     this.refreshHealth();
     this.events.emit('room:entered', { roomNo, isBoss: room.isBoss });
     for (const spawn of generateWave(roomNo, room.isBoss, room.obstacles)) world.spawnEnemy(spawn.type, spawn.x, spawn.z);
@@ -351,7 +352,7 @@ export class Game {
 
   private chooseAugment(offer: AugmentOffer): void {
     this.progression.choose(offer.augment, this.player);
-    this.player.shield = Math.max(this.player.shield, this.player.stats.shieldPerRoom);
+    this.player.shield = Math.max(this.player.shield, this.player.stats.shieldPerRoom * this.player.maxHp);
     this.screens.hide();
     this.refreshHealth();
     this.refreshBuild();
@@ -399,7 +400,7 @@ export class Game {
     events.on('enemy:spawned', ({ enemy }) => enemy.isBoss && this.beginBossFight(enemy));
     events.on('enemy:killed', ({ enemy }) => {
       // XP goes straight to the player on kill (no gems to pick up).
-      this.progression.addXp(enemy.def.xp * player.stats.xpMul);
+      this.progression.addXp(enemy.def.xp * xpRewardMul(this.world.roomNo) * player.stats.xpMul);
       this.effects.collect(player.x, 1.3, player.z);
       if (!enemy.isBoss) return;
       this.cameraRig.shake(0.7);
@@ -431,6 +432,9 @@ export class Game {
     events.on('camera:shake', ({ intensity }) => this.cameraRig.shake(intensity));
     events.on('xp:changed', ({ xp, needed, level }) => this.hud.setXp(xp / needed, level));
     events.on('level:up', ({ level }) => {
+      // Levels make the hero sturdier too, so HP keeps up with the enemies' growing damage.
+      player.increaseMaxHp(Math.round(CLASSES[player.cls].maxHp * BALANCE.hpPerLevel));
+      this.refreshHealth();
       this.hud.toast(`레벨 업! Lv ${level}`);
       this.effects.levelUp(player.x, player.z);
     });

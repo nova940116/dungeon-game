@@ -227,12 +227,12 @@ describe('ProgressionSystem', () => {
     }
   });
 
-  it('"검을 뽑아라" turns the archer into a melee fighter with much higher stats', () => {
+  it('"검을 뽑아라" turns the archer into a sturdier melee fighter', () => {
     const { p, player } = setup();
     const before = { ...player.stats, maxHp: player.maxHp };
     p.choose(get('drawSword'), player);
     expect(player.stats.meleeMode).toBe(true);
-    expect(player.stats.damage).toBeCloseTo(before.damage * 2.4);
+    expect(player.stats.damage).toBeCloseTo(before.damage * 1.4);
     expect(player.maxHp).toBeGreaterThan(before.maxHp);
     // from now on: no projectile augments, melee ones instead, and never the same augment again
     for (let i = 0; i < 200; i++) {
@@ -243,5 +243,13 @@ describe('ProgressionSystem', () => {
       }
       p.skipPick();
     }
+  });
+
+  it('percentage-based survival augments scale with max HP', () => {
+    const { p, player } = setup();
+    p.choose(get('regen'), player);
+    p.choose(get('shieldGen'), player);
+    expect(player.stats.regen).toBeCloseTo(0.01);
+    expect(player.stats.shieldPerRoom).toBeCloseTo(0.25);
   });
 });

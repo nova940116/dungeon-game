@@ -56,9 +56,9 @@ export const ENEMY_DEFS: Record<EnemyType, EnemyDef> = {
   shooter: def({ hp: 46, radius: 0.55, contactDamage: 12, xp: 8, barHeight: 1.9 }),
   golem: def({ hp: 130, radius: 0.85, contactDamage: 18, xp: 15, barHeight: 2.9, maxPerRoom: 2 }),
   // Rooms 11–19 (odd stages): see `enemyPoolForRoom`.
-  troll: def({ hp: 150, radius: 0.75, contactDamage: 18, xp: 13, barHeight: 3.0, maxPerRoom: 3 }),
+  troll: def({ hp: 150, radius: 0.75, contactDamage: 18, xp: 18, barHeight: 3.0, maxPerRoom: 3 }),
   bee: def({ hp: 30, radius: 0.45, contactDamage: 11, xp: 5, barHeight: 1.95, hoverY: 0.35, flying: true }),
-  plant: def({ hp: 75, radius: 0.7, contactDamage: 14, xp: 9, barHeight: 2.7 }),
+  plant: def({ hp: 75, radius: 0.7, contactDamage: 14, xp: 10, barHeight: 2.7 }),
   midboss: def({
     hp: 620, radius: 1.25, contactDamage: 22, xp: 45, barHeight: 4.6, boss: true,
     bossInfo: {
@@ -147,3 +147,6 @@ export function difficultyForRoom(roomNo: number): { hpMul: number; dmgMul: numb
     dmgMul: (1 + n * BALANCE.enemyDmgPerRoom) * BALANCE.enemyDmgPerStage ** stage,
   };
 }
+
+/** XP multiplier for kills in a room: later rooms pay more, so levelling keeps pace with the growing XP bar. */
+export const xpRewardMul = (roomNo: number): number => 1 + Math.max(0, roomNo - 1) * BALANCE.xpPerRoom;

@@ -108,9 +108,9 @@ export interface PlayerStats {
   armor: number;
   /** Chance to ignore a hit (capped at 50%). */
   dodge: number;
-  /** HP per second. */
+  /** HP per second, as a share of max HP. */
   regen: number;
-  /** Shield granted on entering each room. */
+  /** Shield granted on entering each room, as a share of max HP. */
   shieldPerRoom: number;
   /** Contact attackers take this × `damage`. */
   thorns: number;
@@ -126,7 +126,7 @@ export interface PlayerStats {
 }
 
 export const createDefaultStats = (): PlayerStats => ({
-  damage: 22,
+  damage: 25,
   attackInterval: 0.62,
   frontArrows: 1,
   diagonalPairs: 0,

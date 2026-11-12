@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE } from '../src/config';
-import { difficultyForRoom, stageOf } from '../src/data/enemies';
+import { difficultyForRoom, stageOf, xpRewardMul } from '../src/data/enemies';
 
 describe('enemy difficulty', () => {
   it('starts at 1× and climbs every room', () => {
@@ -22,5 +22,17 @@ describe('enemy difficulty', () => {
     const steadyStep = difficultyForRoom(every).hpMul / difficultyForRoom(every - 1).hpMul;
     expect(after.hpMul / before.hpMul).toBeGreaterThan(steadyStep);
     expect(after.dmgMul / before.dmgMul).toBeGreaterThan(1.1);
+  });
+
+  it('keeps enemy damage within reach of a levelled hero (HP grows with levels)', () => {
+    // A hero gains hpPerLevel × base HP each level and reaches roughly level 18 by room 40 (balance model).
+    const heroHpMul = 1 + 17 * BALANCE.hpPerLevel;
+    expect(difficultyForRoom(40).dmgMul / heroHpMul).toBeLessThan(3);
+    expect(difficultyForRoom(40).hpMul).toBeGreaterThan(difficultyForRoom(40).dmgMul * 3);
+  });
+
+  it('pays more XP in later rooms', () => {
+    expect(xpRewardMul(1)).toBe(1);
+    expect(xpRewardMul(21)).toBeCloseTo(1 + 20 * BALANCE.xpPerRoom);
   });
 });

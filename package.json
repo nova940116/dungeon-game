@@ -15,7 +15,8 @@
     "assets:archer": "node scripts/build-archer.mjs",
     "assets:swordsman": "node scripts/build-swordsman.mjs",
     "assets:bosses": "node scripts/build-bosses.mjs",
-    "assets:sounds": "node scripts/fetch-assets.mjs --sounds"
+    "assets:sounds": "node scripts/fetch-assets.mjs --sounds",
+    "balance": "node scripts/balance/run.mjs"
   },
   "dependencies": {
     "three": "^0.187.0"

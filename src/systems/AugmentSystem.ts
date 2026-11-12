@@ -142,7 +142,7 @@ export class AugmentSystem {
     if (!player.alive) return;
 
     if (s.regen > 0 && player.hp < player.maxHp) {
-      this.regenCarry += s.regen * dt;
+      this.regenCarry += s.regen * player.maxHp * dt;
       if (this.regenCarry >= 1) {
         world.healPlayer(Math.floor(this.regenCarry), true);
         this.regenCarry -= Math.floor(this.regenCarry);

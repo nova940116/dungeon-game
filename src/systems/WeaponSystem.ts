@@ -25,7 +25,7 @@ const MELEE_ARC = (78 * Math.PI) / 180;
 const SLASH_HIT = [0.2, 0.2, 0.28] as const;
 /** The combo restarts after this long without a swing. */
 const COMBO_RESET = 1.6;
-const MELEE_DAMAGE = 1.8;
+const MELEE_DAMAGE = 1.4;
 /** Third hit of the combo. */
 const FINISHER = 1.6;
 const SLASH_COLOR = { swordsman: 0xc9d2e0, archer: 0xffc04a } as const;

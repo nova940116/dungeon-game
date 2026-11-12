@@ -58,7 +58,7 @@ export const SETS: Record<TagId, SetDef> = {
   storm: { icon: '⚡', name: '번개', need: 3, bonus: '연쇄 번개 확률 +10%, 튕김 +2', apply: (s) => ((s.chainChance += 0.1), (s.chainJumps += 2)) },
   venom: { icon: '🧪', name: '맹독', need: 3, bonus: '독 최대 중첩 +5, 독 걸린 적이 죽으면 주변에 전염', apply: (s) => ((s.poisonMaxStacks += 5), (s.poisonSpread = true)) },
   hunter: { icon: '🎯', name: '사냥꾼', need: 3, bonus: '치명타 피해 +50%', apply: (s) => void (s.critMultiplier += 0.5) },
-  guard: { icon: '🛡️', name: '수호', need: 3, bonus: '방마다 보호막 +30, 받는 피해 -5%', apply: (s) => ((s.shieldPerRoom += 30), (s.armor += 0.05)) },
+  guard: { icon: '🛡️', name: '수호', need: 3, bonus: '방마다 최대 체력 20%의 보호막, 받는 피해 -5%', apply: (s) => ((s.shieldPerRoom += 0.2), (s.armor += 0.05)) },
   swift: { icon: '💨', name: '질풍', need: 3, bonus: '이동 속도·공격 속도 +10%', apply: (s) => ((s.moveSpeed *= 1.1), (s.attackInterval /= 1.1)) },
   barrage: { icon: '🏹', name: '화살비', need: 3, bonus: '관통 +1', apply: (s) => void (s.pierce += 1) },
   blade: { icon: '🗡️', name: '칼날', need: 2, bonus: '회전 칼날 +1, 칼날 피해 +25%', apply: (s) => ((s.orbitBlades += 1), (s.orbitDamage += 0.25)) },
@@ -75,7 +75,7 @@ export const AUGMENTS: readonly AugmentDef[] = [
   // ------------------------------------------------------------ 일반 (silver)
   silver({ id: 'sharpTip', icon: '🗡️', name: '날 선 화살촉', description: '공격력 +20%', tags: ['hunter'], apply: stat((s) => void (s.damage *= 1.2)) }),
   silver({ id: 'quickDraw', icon: '⚡', name: '빠른 시위', description: '공격 속도 +15%', tags: ['swift'], apply: stat((s) => void (s.attackInterval /= 1.15)) }),
-  silver({ ranged: true, id: 'extraArrow', icon: '⬆️', name: '덧화살', description: '정면으로 나가는 화살 +1', tags: ['barrage'], apply: stat((s) => void s.frontArrows++) }),
+  silver({ ranged: true, id: 'extraArrow', icon: '⬆️', name: '덧화살', description: '정면으로 나가는 화살 +1 (공격력 -15%)', tags: ['barrage'], apply: stat((s) => ((s.frontArrows += 1), (s.damage *= 0.85))) }),
   silver({ ranged: true, id: 'diagonal', icon: '↗️', name: '부채꼴 사격', description: '양쪽 대각선으로 화살 2발 추가', tags: ['barrage'], apply: stat((s) => void s.diagonalPairs++) }),
   silver({ ranged: true, id: 'sideShot', icon: '↔️', name: '양날 사격', description: '좌우 양옆으로도 화살 발사', tags: ['barrage'], apply: stat((s) => void (s.sideArrows = true)) }),
   silver({ ranged: true, id: 'backShot', icon: '⬇️', name: '등 뒤 사격', description: '뒤쪽으로도 화살 발사', tags: ['barrage'], apply: stat((s) => void (s.backArrow = true)) }),
@@ -95,7 +95,7 @@ export const AUGMENTS: readonly AugmentDef[] = [
   silver({ id: 'thickHide', icon: '🦏', name: '두꺼운 가죽', description: '받는 피해 -8%', tags: ['guard'], apply: stat((s) => void (s.armor += 0.08)) }),
   silver({ id: 'nimble', icon: '🍃', name: '날렵함', description: '6% 확률로 공격 회피', tags: ['swift'], apply: stat((s) => void (s.dodge += 0.06)) }),
   silver({ id: 'scholar', icon: '📖', name: '배움의 기쁨', description: '경험치 +20%', apply: stat((s) => void (s.xpMul += 0.2)) }),
-  silver({ id: 'regen', icon: '🌿', name: '재생', description: '초당 체력 1 회복', tags: ['guard'], apply: stat((s) => void (s.regen += 1)) }),
+  silver({ id: 'regen', icon: '🌿', name: '재생', description: '초당 최대 체력의 1% 회복', tags: ['guard'], apply: stat((s) => void (s.regen += 0.01)) }),
   silver({ id: 'giantSlayer', icon: '🗿', name: '거인 사냥꾼', description: '보스에게 주는 피해 +25%', tags: ['hunter'], apply: stat((s) => void (s.bossDamageMul += 0.25)) }),
   silver({ id: 'heavyShot', icon: '🔨', name: '묵직한 화살', description: '적을 밀쳐냄, 공격력 +8%', apply: stat((s) => ((s.knockback += 0.5), (s.damage *= 1.08))) }),
   silver({ id: 'ambush', icon: '🌑', name: '기습', description: '체력이 가득 찬 적에게 피해 +40%', tags: ['hunter'], apply: stat((s) => void (s.ambush += 0.4)) }),
@@ -105,7 +105,7 @@ export const AUGMENTS: readonly AugmentDef[] = [
   silver({ id: 'luckyCharm', icon: '🍀', name: '행운의 부적', description: '다시 뽑기 +3', instant: true, apply: (_p, ctx) => ctx.addRerolls(3) }),
 
   // ------------------------------------------------------------ 희귀 (gold)
-  gold({ id: 'multishot', icon: '🔁', name: '연속 사격', description: '한 번 더 연달아 발사 (공격력 -10%)', tags: ['barrage'], apply: stat((s) => ((s.volleys += 1), (s.damage *= 0.9))) }),
+  gold({ id: 'multishot', icon: '🔁', name: '연속 사격', description: '한 번 더 연달아 발사 (공격력 -15%)', tags: ['barrage'], apply: stat((s) => ((s.volleys += 1), (s.damage *= 0.85))) }),
   gold({ ranged: true, id: 'ricochet', icon: '🎱', name: '도탄', description: '적중한 화살이 근처 다른 적에게 튕김 +1', tags: ['barrage'], apply: stat((s) => void (s.ricochet += 1)) }),
   gold({ ranged: true, id: 'split', icon: '🎆', name: '분열 화살', description: '적중 시 화살이 파편 3발로 갈라짐 (40% 피해)', tags: ['barrage'], apply: stat((s) => void (s.splitShards += 3)) }),
   gold({ ranged: true, id: 'homing', icon: '🧭', name: '추적 화살', description: '화살이 가까운 적을 따라감', tags: ['hunter'], apply: stat((s) => void (s.homing += 5)) }),
@@ -125,7 +125,7 @@ export const AUGMENTS: readonly AugmentDef[] = [
     apply: stat((s) => ((s.novaDamage += 0.9), (s.novaInterval = s.novaDamage > 1 ? 3.2 : 4))),
   }),
   gold({ id: 'vampire', icon: '🧛', name: '흡혈귀', description: '입힌 피해의 3%만큼 회복', tags: ['guard'], apply: stat((s) => void (s.lifestealOnHit += 0.03)) }),
-  gold({ id: 'shieldGen', icon: '🔰', name: '수호의 장막', description: '방에 들어갈 때마다 체력 25 보호막', tags: ['guard'], apply: stat((s) => void (s.shieldPerRoom += 25)) }),
+  gold({ id: 'shieldGen', icon: '🔰', name: '수호의 장막', description: '방에 들어갈 때마다 최대 체력 25%의 보호막', tags: ['guard'], apply: stat((s) => void (s.shieldPerRoom += 0.25)) }),
   gold({ id: 'thorns', icon: '🌵', name: '가시 갑옷', description: '부딪친 적에게 공격력 150% 반사, 받는 피해 -5%', tags: ['guard'], apply: stat((s) => ((s.thorns += 1.5), (s.armor += 0.05))) }),
   gold({ id: 'hunterMark', icon: '🎯', name: '사냥감 표식', description: '적중한 적이 3초간 받는 피해 +15%', tags: ['hunter'], apply: stat((s) => void (s.markOnHit += 0.15)) }),
   gold({ id: 'executioner', icon: '🪓', name: '처형인', description: '체력 12% 이하의 일반 적 즉시 처치', tags: ['hunter'], apply: stat((s) => void (s.executeThreshold += 0.12)) }),
@@ -192,16 +192,16 @@ export const AUGMENTS: readonly AugmentDef[] = [
   }),
   prism({
     only: 'archer', id: 'drawSword', icon: '🏏', name: '검을 뽑아라',
-    description: '화살을 버리고 활을 휘둘러 싸운다. 공격력 ×2.4, 최대 체력 +60%, 받는 피해 -15%, 공격·이동 속도 +20%/+10%',
+    description: '화살을 버리고 활을 휘둘러 싸운다. 공격력 ×1.4, 최대 체력 +40%, 받는 피해 -10%, 공격·이동 속도 +15%/+10%',
     isAvailable: (p) => !p.stats.meleeMode,
     apply: (p) => {
       const s = p.stats;
       s.meleeMode = true;
-      s.damage *= 2.4;
-      s.armor += 0.15;
-      s.attackInterval /= 1.2;
+      s.damage *= 1.4;
+      s.armor += 0.1;
+      s.attackInterval /= 1.15;
       s.moveSpeed *= 1.1;
-      p.increaseMaxHp(p.maxHp * 0.6);
+      p.increaseMaxHp(p.maxHp * 0.4);
     },
   }),
 ];

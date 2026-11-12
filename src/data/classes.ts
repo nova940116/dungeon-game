@@ -39,8 +39,8 @@ export const CLASSES: Record<PlayerClass, ClassDef> = {
     model: 'swordsman',
     maxHp: 140,
     stats: (s) => {
-      s.damage = 30;
-      s.attackInterval = 0.7;
+      s.damage = 24;
+      s.attackInterval = 0.75;
       s.armor = 0.1;
       s.moveSpeed = 6.2;
     },

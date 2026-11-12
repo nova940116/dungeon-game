@@ -24,9 +24,9 @@ export const BALANCE = {
   stageBossEvery: 10,
   /** Enemy scaling: linear per room, then compounded per stage (every `stageBossEvery` rooms). */
   enemyHpPerRoom: 0.2,
-  enemyDmgPerRoom: 0.07,
+  enemyDmgPerRoom: 0.05,
   enemyHpPerStage: 1.35,
-  enemyDmgPerStage: 1.2,
+  enemyDmgPerStage: 1.12,
   /** Wave size: first room of a stage, plus this many per room after it (room 9 of a stage = 4 + 8 = 12). */
   enemiesFirstRoom: 4,
   enemiesPerRoom: 1,
@@ -45,6 +45,10 @@ export const BALANCE = {
   xpBase: 18,
   xpPerLevel: 14,
   xpGrowth: 2,
+  /** Enemy XP grows with the room (tougher rooms pay more), so levels keep coming as the XP bar grows. */
+  xpPerRoom: 0.06,
+  /** Max HP gained per level, as a share of the class's base HP (healed by the same amount). */
+  hpPerLevel: 0.04,
 } as const;
 
 export const ENGINE = {
