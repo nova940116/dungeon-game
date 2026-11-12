@@ -3,7 +3,7 @@
  * (see scripts/asset-sources.json) into public/assets/.
  */
 
-export type ClipName = 'idle' | 'move' | 'run' | 'attack' | 'hit' | 'death' | 'jump' | 'punch' | 'roar' | 'draw' | 'hold' | 'release' | 'heavy';
+export type ClipName = 'idle' | 'move' | 'run' | 'attack' | 'hit' | 'death' | 'jump' | 'punch' | 'roar' | 'draw' | 'hold' | 'release' | 'heavy' | 'spin';
 
 export interface ModelSpec {
   url: string;
@@ -35,12 +35,12 @@ export const MODELS = {
   },
   // Built by `npm run assets:swordsman` (Blender): dark greatsword warrior — blackened plate, great helm, a colossal
   // two-handed greatsword (scripts/blender/greatsword.py). Idle, Run and the three-hit combo (two-handed sweep,
-  // reverse sweep, leaping ground smash) are hand-authored in scripts/blender/sword_moves.py.
+  // reverse sweep, leaping ground smash; a full spin with "회오리 베기") are hand-authored in scripts/blender/sword_moves.py.
   swordsman: {
     // Same body scale as the archer: measured without the sword (it points straight up in the rest pose),
     // and a bit taller overall because the helm crest rises above the archer's hair.
     url: model('characters/player_swordsman.glb'), fit: 'height', size: 2.05, animated: true, pivot: 'origin', fitExclude: ['Greatsword'], noGlow: true,
-    clips: { idle: 'Idle', run: 'Run', attack: 'Slash', punch: 'Slash_Back', heavy: 'Slash_Heavy', hit: 'HitRecieve', death: 'Death' },
+    clips: { idle: 'Idle', run: 'Run', attack: 'Slash', punch: 'Slash_Back', heavy: 'Slash_Heavy', spin: 'Slash_Spin', hit: 'HitRecieve', death: 'Death' },
   },
   slime: {
     url: model('characters/enemy_slime.glb'), fit: 'max', size: 1.4, animated: true,

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { BALANCE } from '../config';
 import { AnimatedModel } from '../assets/AnimatedModel';
+import type { ClipName } from '../assets/AssetManifest';
 import { HealthBar } from '../assets/models/HealthBar';
 import type { Room } from '../world/Room';
 import { clamp, dampAngle, shieldedRatios, type Vec2 } from '../utils/math';
@@ -18,8 +19,10 @@ const MIN_DRAW_TIME = 0.12;
  * Combo clips: how far into each clip the blade crosses the target (swordsman: scripts/blender/sword_moves.py HIT;
  * the archer's bow swing after "검을 뽑아라" uses 'attack' only).
  */
-const SLASH_HIT = { attack: 12 / 28, punch: 12 / 28, heavy: 15 / 34 } as const;
+const SLASH_HIT = { attack: 12 / 28, punch: 12 / 28, heavy: 15 / 34, spin: 12 / 36 } as const;
 const COMBO_CLIPS = ['attack', 'punch', 'heavy'] as const;
+/** One-shot clips a flinch must not interrupt. */
+const ATTACK_CLIPS = new Set<ClipName>(['attack', 'punch', 'heavy', 'spin', 'draw', 'release']);
 /** The archer's bow swing (melee mode): where the bow crosses the target. */
 const BOW_SWING_HIT = 0.4;
 
@@ -72,12 +75,13 @@ export class Player {
   }
 
   /**
-   * Swordsman combo: forehand, backhand, then the overhead finisher, timed so the blade crosses the
-   * target `hitDelay` seconds from now.
+   * Swordsman combo: forehand, backhand, then the overhead finisher (a full spin with "회오리 베기"),
+   * timed so the blade crosses the target `hitDelay` seconds from now.
    */
-  playSlash(step: number, hitDelay: number): void {
+  playSlash(step: number, hitDelay: number, spin = false): void {
     // The archer (after "검을 뽑아라") only has the one bow swing.
-    const wanted = this.cls === 'archer' ? 'attack' : COMBO_CLIPS[step % COMBO_CLIPS.length];
+    const combo = COMBO_CLIPS[step % COMBO_CLIPS.length];
+    const wanted = this.cls === 'archer' ? 'attack' : combo === 'heavy' && spin ? 'spin' : combo;
     const clip = this.model.has(wanted) ? wanted : 'attack';
     const hitAt = this.model.duration(clip) * (this.cls === 'archer' ? BOW_SWING_HIT : SLASH_HIT[clip]);
     this.model.playOnce(clip, { fade: 0.04, timeScale: clamp(hitAt / hitDelay, 1, MAX_ANIM_SPEED) });
@@ -184,7 +188,8 @@ export class Player {
     if (!this.alive) {
       this.bar.root.visible = false;
       this.model.playOnce('death', { hold: true, fade: 0.1 });
-    } else if (!this.moving) {
+    } else if (!this.moving && !ATTACK_CLIPS.has(this.model.oneShotName ?? 'idle')) {
+      // A flinch never cuts a swing or a shot short: the attack keeps its weight (and its timing).
       this.model.playOnce('hit', { timeScale: 1.6 });
     }
     return { dealt, revived: false };

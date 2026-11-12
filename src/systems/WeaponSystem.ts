@@ -28,7 +28,7 @@ const COMBO_RESET = 1.6;
 const MELEE_DAMAGE = 1.4;
 /** Third hit of the combo. */
 const FINISHER = 1.6;
-const SLASH_COLOR = { swordsman: 0xc9d2e0, archer: 0xffc04a } as const;
+const SLASH_COLOR = { archer: 0xffc04a } as const;
 /** How far in front the greatsword lands on the finisher (share of the reach): shockwave + dust there. */
 const SMASH_AT = 0.55;
 
@@ -143,7 +143,7 @@ export class WeaponSystem {
     this.combo = (this.combo + 1) % 3;
     this.sinceSwing = 0;
     const hitDelay = SLASH_HIT[step];
-    player.playSlash(step, hitDelay);
+    player.playSlash(step, hitDelay, player.stats.spinFinisher);
     world.events.emit('weapon:fired', { x: player.x, z: player.z, weapon: 'sword' });
     this.queue.push({ delay: hitDelay, run: () => this.slashHit(world, angle, step) });
   }
@@ -157,9 +157,17 @@ export class WeaponSystem {
     const reach = this.reach(world) * (finisher ? 1.2 : 1);
     const halfArc = spin ? Math.PI : Math.min(Math.PI, MELEE_ARC * s.meleeArcMul * (finisher ? 1.2 : 1));
     const power = finisher ? FINISHER : 1;
-    world.effects.slashArc(player.x, player.z, angle, reach, SLASH_COLOR[player.cls], halfArc * 2, step % 2 === 1);
+    // The greatsword's swing speaks for itself: no sword-wave trail (the bow swing keeps its arc).
+    if (player.cls !== 'swordsman') world.effects.slashArc(player.x, player.z, angle, reach, SLASH_COLOR.archer, halfArc * 2, step % 2 === 1);
     if (finisher) {
       world.events.emit('camera:shake', { intensity: spin ? 0.24 : 0.18 });
+      if (player.cls === 'swordsman' && spin) {
+        // The spin kicks up a ring of dust around the feet.
+        for (let i = 0; i < 10; i++) {
+          const a = (i / 10) * Math.PI * 2;
+          world.effects.dust(player.x + Math.sin(a) * 1.1, player.z + Math.cos(a) * 1.1, 0x8a7a64);
+        }
+      }
       if (player.cls === 'swordsman' && !spin) {
         // The greatsword hits the ground: shockwave and dust where it lands.
         const x = player.x + Math.sin(angle) * reach * SMASH_AT;

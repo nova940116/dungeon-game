@@ -10,6 +10,9 @@ Hand-authored greatsword clips on the Quaternius "CharacterArmature" rig (the he
   Slash_Back   the reverse sweep, left → right, stepping in with the right foot
   Slash_Heavy  crouch, leap with the blade raised behind the back, then smash it down into the ground in a deep
                landing crouch, hold the impact, lift it back to the shoulder
+  Slash_Spin   the "회오리 베기" finisher: coil low to the right, then a full 360° (and a bit) spin on the balls
+               of the feet with the greatsword held out flat at arm's length, the body leaning into it, then
+               it drags to a stop and goes back up to the shoulder
 
 Poses are written as targets, not joint angles:
   spine   {bone: (rx, ry, rz)} in character axes, relative to the parent (bosskit convention:
@@ -35,7 +38,7 @@ SPINE = ['Body', 'Hips', 'Abdomen', 'Torso', 'Chest', 'Neck', 'Head']
 FINGER_PREFIXES = ('Index', 'Middle', 'Ring', 'Pinky', 'Thumb')
 
 # Where the blade crosses the target, as a share of each clip (read by the game: src/entities/Player.ts).
-HIT = {'Slash': 12 / 28, 'Slash_Back': 12 / 28, 'Slash_Heavy': 15 / 34}
+HIT = {'Slash': 12 / 28, 'Slash_Back': 12 / 28, 'Slash_Heavy': 15 / 34, 'Slash_Spin': 12 / 36}
 
 
 def rot(rx=0.0, ry=0.0, rz=0.0):
@@ -430,6 +433,31 @@ def run_pose(t):
     }
 
 
+def _turn(v, angle):
+    c, s = math.cos(math.radians(angle)), math.sin(math.radians(angle))
+    return (v[0] * c - v[1] * s, v[0] * s + v[1] * c, *v[2:])
+
+
+def spin_pose(p, angle):
+    """The pose turned `angle` degrees to the character's left about its vertical axis (feet, hands, blade,
+    elbows and the Body bone): used for spins, where the hero pivots on his feet."""
+    out = {k: v for k, v in p.items()}
+    spine = dict(p['spine'])
+    rx, ry, rz = spine['Body']
+    spine['Body'] = (rx, ry, rz + angle)
+    out['spine'] = spine
+    out['feet'] = {k: _turn(v, angle) for k, v in p['feet'].items()}
+    hands = {}
+    for side, spec in p['hands'].items():
+        h = dict(spec)
+        for key in ('at', 'blade', 'flat', 'elbow'):
+            if key in h:
+                h[key] = _turn(h[key], angle)
+        hands[side] = h
+    out['hands'] = hands
+    return out
+
+
 def author(arm):
     rig = Rig(arm)
     rig.capture_fingers(bpy.data.actions['Idle'], 0)
@@ -505,4 +533,26 @@ def author(arm):
         (34, idle_pose(0)),
     ]
     rig.clip('Slash_Heavy', keys, idle_ends=True)
+
+    # ---- Slash_Spin: a full turn with the blade held out. The whole pose is turned about the body's axis
+    # (hands, blade, feet, hips), so the hero pivots on his feet instead of twisting his legs.
+    def spun(p, angle):
+        return spin_pose(p, angle)
+
+    held = lambda lean, drop, roll=0.0: pose(body(lean=lean, drop=drop, roll=roll), feet((0.2, -0.06, 0.023, 10), (-0.2, 0.08, 0.023, 10)),
+                                            two_hands((-0.3, -0.42, 1.18), (-0.92, -0.36, -0.05), elbow=(-0.5, 0.3, -0.8), left_elbow=(0.4, 0.3, -0.8)))
+    coil = pose(body(yaw=-30, lean=18, drop=0.2, roll=-6), feet((0.2, -0.1, 0.023, 0), (-0.2, 0.14, 0.023, 0)),
+                two_hands((-0.38, 0.12, 1.08), (-0.55, 0.8, -0.15), elbow=(-0.5, 0.6, -0.6), left_elbow=(0.3, -0.4, -0.8)))
+    keys = [
+        (0, idle_pose(0)),
+        (6, spun(coil, -35)),
+        (9, spun(held(14, 0.18, -4), 10)),
+        (12, spun(held(16, 0.2, -8), 120)),
+        (15, spun(held(16, 0.2, -10), 235)),
+        (18, spun(held(14, 0.18, -8), 340)),
+        (22, spun(held(10, 0.16, -4), 400)),
+        (27, spun(pose(body(lean=8, drop=0.12), STANCE, two_hands((0.0, -0.36, 1.42), (0.15, -0.3, 0.94), flat=(1, 0, 0), left_elbow=(0.7, 0.2, -0.6))), 380)),
+        (36, spun(idle_pose(0), 360)),
+    ]
+    rig.clip('Slash_Spin', keys, idle_ends=True)
     return rig

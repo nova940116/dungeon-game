@@ -209,11 +209,12 @@ def restyle(arm):
         if o.name.split('.')[0] == 'Cape':
             bpy.data.objects.remove(o, do_unlink=True)
     helm = bpy.data.objects.get('GreatHelm')
-    if helm and not helm.get('restyled'):
+    has_plume = helm and any(m and m.name.split('.')[0] == 'Helm_Plume' for m in helm.data.materials) and any(
+        helm.data.materials[p.material_index].name.split('.')[0] == 'Helm_Plume' for p in helm.data.polygons)
+    if has_plume:   # not converted yet (re-running on a built model must not scale the helm twice)
         _remove_faces(helm, 'Helm_Plume')
         # Scaled from the neck so it grows up and out, not down into the gorget.
         _scale_mesh(helm, HELM_SCALE, Vector((0.0, -0.04, 1.47)))
-        helm['restyled'] = True
     for mat in bpy.data.materials:
         spec = PALETTE.get(mat.name.split('.')[0])
         if spec:
